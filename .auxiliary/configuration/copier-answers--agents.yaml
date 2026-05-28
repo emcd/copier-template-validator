@@ -1,0 +1,19 @@
+# Changes here will be overwritten by Copier
+_commit: v1.0a10-10-g97ab89c
+_src_path: gh:emcd/agents-common
+coders:
+- claude
+- codex
+- opencode
+instructions_sources:
+-   files:
+        '*.rst':
+            strip_header_lines: 20
+    source: github:emcd/python-project-common@docs-1#documentation/common
+instructions_target: .auxiliary/instructions
+languages:
+- python
+project_bundle_name: infrastructure
+project_name: copier-template-validator
+provide_instructions: true
+support_local_models: true
