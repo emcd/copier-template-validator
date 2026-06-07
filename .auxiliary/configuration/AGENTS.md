@@ -9,10 +9,25 @@
 - Check README files in directories you're working with for insights about architecture, constraints, and TODO items.
 
 ## Purpose
-[Describe your project's purpose and goals]
+
+Generic Copier template validator. Validates Copier templates instantiated
+with various preset answer files (variants). Provides configurable
+validation commands so that any Copier template project can use it for QA.
+CLI entry point: `copiertv`.
 
 ## Tech Stack
-[List your primary technologies]
+
+- Python 3.10+
+- Hatch/Hatchling (build system)
+- tyro (CLI argument parsing via dataclasses)
+- frigid (immutable data structures, exception base)
+- absence (sentinel values)
+- dynadoc (annotation-based documentation)
+- emcd-appcore (CLI framework, state management)
+- Copier (template engine, invoked as subprocess)
+- pytest (testing)
+- ruff, pyright (linting, type checking)
+- Sphinx + Furo (documentation)
 
 # Development Standards
 
