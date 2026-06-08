@@ -8,7 +8,7 @@ requires = [
 build-backend = 'hatchling.build'
 
 [project]
-name = 'copier-template-validator'
+name = 'copiertv'
 description = 'Validates Copier templates instantiated with various presets.'
 dynamic = [ 'version' ]
 license = 'Apache-2.0'
@@ -49,7 +49,7 @@ copiertv = 'copiertv:main'
 [project.urls]
 'Homepage' = 'https://github.com/emcd/copier-template-validator'
 'Documentation' = 'https://emcd.github.io/copier-template-validator'
-'Download' = 'https://pypi.org/project/copier-template-validator/#files'
+'Download' = 'https://pypi.org/project/copiertv/#files'
 'Source Code' = 'https://github.com/emcd/copier-template-validator'
 'Issue Tracker' = 'https://github.com/emcd/copier-template-validator/issues'
 

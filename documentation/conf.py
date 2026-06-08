@@ -104,7 +104,7 @@ linkcheck_ignore = [
     r'https://github\.com/emcd/copier-template-validator',
     r'https://github\.com/emcd/copier-template-validator/.*',
     # Package does not exist during initial development.
-    r'https://pypi.org/project/copier-template-validator/',
+    r'https://pypi.org/project/copiertv/',
     # Github aggressively rate-limits access to certain blobs.
     r'https://github\.com/.*/.*/blob/.*',
     # Avoid timeouts for slow sites.

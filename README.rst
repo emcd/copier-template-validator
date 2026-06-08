@@ -17,16 +17,16 @@
    +--------------------------------------------------------------------------+
 
 *******************************************************************************
-                           copier-template-validator                           
+                                    copiertv                                   
 *******************************************************************************
 
-.. image:: https://img.shields.io/pypi/v/copier-template-validator
+.. image:: https://img.shields.io/pypi/v/copiertv
    :alt: Package Version
-   :target: https://pypi.org/project/copier-template-validator/
+   :target: https://pypi.org/project/copiertv/
 
-.. image:: https://img.shields.io/pypi/status/copier-template-validator
+.. image:: https://img.shields.io/pypi/status/copiertv
    :alt: PyPI - Status
-   :target: https://pypi.org/project/copier-template-validator/
+   :target: https://pypi.org/project/copiertv/
 
 .. image:: https://github.com/emcd/copier-template-validator/actions/workflows/tester.yaml/badge.svg?branch=master&event=push
    :alt: Tests Status
@@ -40,9 +40,9 @@
    :alt: Project License
    :target: https://github.com/emcd/copier-template-validator/blob/master/LICENSE.txt
 
-.. image:: https://img.shields.io/pypi/pyversions/copier-template-validator
+.. image:: https://img.shields.io/pypi/pyversions/copiertv
    :alt: Python Versions
-   :target: https://pypi.org/project/copier-template-validator/
+   :target: https://pypi.org/project/copiertv/
 
 
 .. todo:: Provide project description and key features.
@@ -59,20 +59,20 @@ Install via the `uv <https://github.com/astral-sh/uv/blob/main/README.md>`_
 
 ::
 
-    uv tool install copier-template-validator
+    uv tool install copiertv
 
 or, run directly with `uvx
 <https://github.com/astral-sh/uv/blob/main/README.md>`_:
 
 ::
 
-    uvx --from copier-template-validator copiertv
+    uvx copiertv
 
 Or, install via `pipx <https://pipx.pypa.io/stable/how-to/install-pipx/>`_:
 
 ::
 
-    pipx install copier-template-validator
+    pipx install copiertv
 
 Method: Install Python Package
 -------------------------------------------------------------------------------
@@ -82,13 +82,13 @@ command:
 
 ::
 
-    uv pip install copier-template-validator
+    uv pip install copiertv
 
 Or, install via ``pip``:
 
 ::
 
-    pip install copier-template-validator
+    pip install copiertv
 
 
 .. todo:: Provide usage examples and additional content.
@@ -138,13 +138,13 @@ Additional Indicia
    :alt: Ruff
    :target: https://github.com/astral-sh/ruff
 
-.. image:: https://img.shields.io/pypi/implementation/copier-template-validator
+.. image:: https://img.shields.io/pypi/implementation/copiertv
    :alt: PyPI - Implementation
-   :target: https://pypi.org/project/copier-template-validator/
+   :target: https://pypi.org/project/copiertv/
 
-.. image:: https://img.shields.io/pypi/wheel/copier-template-validator
+.. image:: https://img.shields.io/pypi/wheel/copiertv
    :alt: PyPI - Wheel
-   :target: https://pypi.org/project/copier-template-validator/
+   :target: https://pypi.org/project/copiertv/
 
 
 Other Projects by This Author 🌟

@@ -1,11 +1,11 @@
 # Changes here will be overwritten by Copier
-_commit: v1.58.1
+_commit: v1.58.2
 _src_path: gh:emcd/python-project-common
 author_email: emcd@users.noreply.github.com
 author_name: Eric McDonald
 description: Validates Copier templates instantiated with various presets.
 development_status: 3 - Alpha
-distribution_name: copier-template-validator
+distribution_name: copiertv
 enable_cli: true
 enable_executables: false
 enable_property_tests: false

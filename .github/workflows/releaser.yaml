@@ -171,14 +171,14 @@ jobs:
         run: |
           set -eu -o pipefail
           cd ${{ env.DISTRIBUTIONS_PATH }}
-          sha256sum copier-template-validator-* >SHA256SUMS.txt
+          sha256sum copiertv-* >SHA256SUMS.txt
 
       - name: Attest Build Provenance
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: |
             ${{ env.DISTRIBUTIONS_PATH }}/SHA256SUMS.txt
-            ${{ env.DISTRIBUTIONS_PATH }}/copier-template-validator-*
+            ${{ env.DISTRIBUTIONS_PATH }}/copiertv-*
 
       - name: Generate Release Notes
         run: |
