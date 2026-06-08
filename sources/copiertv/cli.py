@@ -22,21 +22,94 @@
 
 
 from . import __
+from . import configuration as _configuration
+from . import engine as _engine
+
+
+async def _survey( config: _configuration.Configuration ) -> None:
+    ''' Lists discovered template variants. '''
+    answers_dir = config.answers_directory
+    if __.is_absent( answers_dir ):
+        from .exceptions import ConfigurationInvalidity
+        raise ConfigurationInvalidity( 'answers directory' )  # noqa: TRY003
+    for variant in _engine.survey_variants( answers_dir ):
+        print( variant )
+
+
+async def _validate(
+    variant: str,
+    config: _configuration.Configuration,
+) -> None:
+    ''' Validates a template variant. '''
+    result = _engine.validate_variant( variant, config )
+    lines = result.render_as_markdown( )
+    print( '\n'.join( lines ) )
+
+
+@_engine.intercept_errors( )
+async def _main( ) -> None:
+    ''' Entrypoint for CLI execution. '''
+    config = (
+        __.tyro.conf.EnumChoicesFromValues,
+        __.tyro.conf.HelptextFromCommentsOff,
+    )
+    dispatcher = __.tyro.cli( _CommandDispatcher, config = config )
+    await dispatcher( )
+
+
+class _SurveyCommand:
+    ''' Surveys available template configuration variants. '''
+
+    async def __call__( self ) -> None:
+        config = _configuration.acquire_configuration( )
+        await _survey( config )
+
+
+class _ValidateCommand:
+    ''' Validates template against configuration variant. '''
+
+    variant: __.typx.Annotated[
+        str,
+        __.typx.Doc( ''' Configuration variant to validate. ''' ),
+        __.tyro.conf.Positional,
+    ]
+    preserve: __.typx.Annotated[
+        bool,
+        __.tyro.conf.arg(
+            help = 'Keep temporary files for inspection.',
+            prefix_name = False ),
+    ] = False
+
+    async def __call__( self ) -> None:
+        cli_config = _configuration.Configuration(
+            preserve = self.preserve )
+        config = _configuration.acquire_configuration( cli_config )
+        await _validate( self.variant, config )
+
+
+class _CommandDispatcher:
+    ''' Dispatches template validation commands. '''
+
+    command: __.typx.Union[
+        __.typx.Annotated[
+            _SurveyCommand,
+            __.tyro.conf.subcommand(
+                'survey', prefix_name = False ),
+        ],
+        __.typx.Annotated[
+            _ValidateCommand,
+            __.tyro.conf.subcommand(
+                'validate', prefix_name = False ),
+        ],
+    ] = __.dcls.field( default_factory = _SurveyCommand )
+
+    async def __call__( self ) -> None:
+        await self.command( )
 
 
 def execute( ) -> None:
     ''' Entrypoint for CLI execution. '''
     from asyncio import run
-    config = (
-        __.tyro.conf.EnumChoicesFromValues,
-        __.tyro.conf.HelptextFromCommentsOff,
-    )
-    try: run( __.tyro.cli( _main, config = config )( ) ) # pyright: ignore
+    try: run( _main( ) )
     except SystemExit: raise
-    except BaseException:
-        # TODO: Log exception.
-        raise SystemExit( 1 ) from None
-
-
-async def _main( ) -> None:
-    print( "Hello from copiertv CLI!" )
+    except BaseException: raise SystemExit( 1 ) from None
