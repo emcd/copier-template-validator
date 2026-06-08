@@ -137,7 +137,7 @@ def intercept_errors( ) -> __.cabc.Callable[
 def survey_variants(
     answers_directory: __.Path,
 ) -> tuple[ str, ... ]:
-    ''' Discovers variant names from answers-*.yaml files. '''
+    ''' Discovers variant names from ``answers-*.yaml`` files. '''
     if not answers_directory.is_dir( ):
         raise _exceptions.ConfigurationAbsence( answers_directory )
     return tuple( sorted(

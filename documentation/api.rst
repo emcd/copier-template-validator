@@ -35,3 +35,15 @@ Module ``copiertv.exceptions``
 -------------------------------------------------------------------------------
 
 .. automodule:: copiertv.exceptions
+
+
+Module ``copiertv.configuration``
+-------------------------------------------------------------------------------
+
+.. automodule:: copiertv.configuration
+
+
+Module ``copiertv.engine``
+-------------------------------------------------------------------------------
+
+.. automodule:: copiertv.engine

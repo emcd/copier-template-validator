@@ -45,7 +45,27 @@
    :target: https://pypi.org/project/copiertv/
 
 
-.. todo:: Provide project description and key features.
+📋 A generic validator for `Copier <https://github.com/copier-org/copier>`_
+templates. Instantiates templates with various preset answer files
+(variants) and runs configurable validation commands against the
+generated projects.
+
+Key Features
+-------------------------------------------------------------------------------
+
+- **Configurable validation commands**: Define validation commands in a
+  TOML configuration file. The tool is agnostic about what gets validated.
+- **Configurable answers directory**: Specify where variant answer files
+  live. No hardcoded convention imposed.
+- **Placeholder interpolation**: Use ``{template_dir}``,
+  ``{project_dir}``, ``{temp_dir}``, and ``{variant}`` in command args
+  and working directories.
+- **Copier Python API**: Uses ``copier.run_copy`` directly instead of
+  shelling out to a subprocess.
+- **Configuration hierarchy**: CLI arguments, environment variable,
+  per-project config, and per-user config with clear precedence.
+- **Structured error handling**: Domain-specific exceptions with
+  Markdown rendering for terminal display.
 
 
 Installation 📦
@@ -91,7 +111,54 @@ Or, install via ``pip``:
     pip install copiertv
 
 
-.. todo:: Provide usage examples and additional content.
+Usage
+===============================================================================
+
+Survey Variants
+-------------------------------------------------------------------------------
+
+List available template variants from an answers directory::
+
+    copiertv survey --answers-directory data/copier
+
+Validate a Variant
+-------------------------------------------------------------------------------
+
+Validate a template variant::
+
+    copiertv validate --answers-directory data/copier default
+
+Preserve the generated project for inspection::
+
+    copiertv validate --answers-directory data/copier --preserve default
+
+Configuration File
+-------------------------------------------------------------------------------
+
+Create ``.auxiliary/configuration/copiertv/general.toml`` in your
+template repository::
+
+    [answers]
+    directory = "data/copier"
+
+    [[commands]]
+    args = ["hatch", "env", "prune"]
+
+    [[commands]]
+    args = ["hatch", "--env", "develop", "run", "make-all"]
+
+    [options]
+    preserve = false
+    unsafe = false
+
+Commands support placeholder interpolation for paths::
+
+    [[commands]]
+    args = ["make", "check", "--source", "{project_dir}"]
+    cwd = "{template_dir}"
+
+Available placeholders: ``{template_dir}``, ``{project_dir}``,
+``{temp_dir}``, ``{variant}``.
 
 
 Contribution 🤝

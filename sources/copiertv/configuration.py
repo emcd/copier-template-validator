@@ -48,7 +48,7 @@ class Configuration( __.immut.DataclassObject ):
     answers_directory: __.typx.Annotated[
         __.Absential[ __.Path ],
         __.typx.Doc(
-            ''' Directory containing answers-*.yaml files. ''' ),
+            ''' Directory containing ``answers-*.yaml`` files. ''' ),
     ] = __.absent
     commands: __.typx.Annotated[
         tuple[ ValidationCommand, ... ],
