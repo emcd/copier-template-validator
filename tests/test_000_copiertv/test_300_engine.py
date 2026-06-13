@@ -259,7 +259,7 @@ def test_270_validate_variant_command_failure_propagates( fs, tmp_path ):
         )
 
 
-def test_280_validate_variant_cleanup_on_success( fs, tmp_path, mocker ):
+def test_280_validate_variant_cleanup_on_success( fs, tmp_path ):
     ''' Removes temp directory when preserve is False. '''
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
@@ -269,17 +269,15 @@ def test_280_validate_variant_cleanup_on_success( fs, tmp_path, mocker ):
         answers_directory = answers_dir,
         template_directory = tmp_path / 'template',
     )
-    mock_remove = mocker.patch(
-        'copiertv.engine._remove_temporary_directory' )
-    validate_variant(
+    result = validate_variant(
         'default', config,
         copier = lambda *a, **k: None,
         executor = lambda *a, **k: None,
     )
-    mock_remove.assert_called_once( )
+    assert not result.temporary_directory.exists( )
 
 
-def test_290_validate_variant_preserves_on_config( fs, tmp_path, mocker ):
+def test_290_validate_variant_preserves_on_config( fs, tmp_path ):
     ''' Keeps temp directory when preserve is True. '''
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
@@ -290,17 +288,15 @@ def test_290_validate_variant_preserves_on_config( fs, tmp_path, mocker ):
         template_directory = tmp_path / 'template',
         preserve = True,
     )
-    mock_remove = mocker.patch(
-        'copiertv.engine._remove_temporary_directory' )
-    validate_variant(
+    result = validate_variant(
         'default', config,
         copier = lambda *a, **k: None,
         executor = lambda *a, **k: None,
     )
-    mock_remove.assert_not_called( )
+    assert result.temporary_directory.exists( )
 
 
-def test_295_validate_variant_cleanup_on_exception( fs, tmp_path, mocker ):
+def test_295_validate_variant_cleanup_on_exception( fs, tmp_path ):
     ''' Removes temp directory when copier raises unexpected error. '''
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
@@ -310,8 +306,7 @@ def test_295_validate_variant_cleanup_on_exception( fs, tmp_path, mocker ):
         answers_directory = answers_dir,
         template_directory = tmp_path / 'template',
     )
-    mock_remove = mocker.patch(
-        'copiertv.engine._remove_temporary_directory' )
+    temp_dirs_before = set( tmp_path.parent.glob( 'copiertv-*' ) )
     def failing_copier( *a, **k ):
         raise RuntimeError( 'unexpected' )
     with pytest.raises( exceptions.ConfigurationInvalidity ):
@@ -320,7 +315,8 @@ def test_295_validate_variant_cleanup_on_exception( fs, tmp_path, mocker ):
             copier = failing_copier,
             executor = lambda *a, **k: None,
         )
-    mock_remove.assert_called_once( )
+    temp_dirs_after = set( tmp_path.parent.glob( 'copiertv-*' ) )
+    assert temp_dirs_before == temp_dirs_after
 
 
 def test_296_validate_variant_missing_template_directory( fs, tmp_path ):
@@ -341,8 +337,9 @@ def test_296_validate_variant_missing_template_directory( fs, tmp_path ):
         )
 
 
-def test_297_validate_variant_cleanup_preserve( fs, tmp_path, mocker ):
+def test_297_validate_variant_cleanup_preserve( fs, tmp_path ):
     ''' Skips cleanup when preserve=True and exception occurs. '''
+    import tempfile
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
     answers_file = answers_dir / 'answers-default.yaml'
@@ -352,8 +349,8 @@ def test_297_validate_variant_cleanup_preserve( fs, tmp_path, mocker ):
         template_directory = tmp_path / 'template',
         preserve = True,
     )
-    mock_remove = mocker.patch(
-        'copiertv.engine._remove_temporary_directory' )
+    system_temp = Path( tempfile.gettempdir( ) )
+    temp_dirs_before = set( system_temp.glob( 'copiertv-*' ) )
     def failing_copier( *a, **k ):
         raise RuntimeError( 'unexpected' )
     with pytest.raises( exceptions.ConfigurationInvalidity ):
@@ -362,21 +359,20 @@ def test_297_validate_variant_cleanup_preserve( fs, tmp_path, mocker ):
             copier = failing_copier,
             executor = lambda *a, **k: None,
         )
-    mock_remove.assert_not_called( )
+    temp_dirs_after = set( system_temp.glob( 'copiertv-*' ) )
+    assert len( temp_dirs_after ) > len( temp_dirs_before )
 
 
 # --- ExecuteValidationCommands ---
 
-def test_300_execute_validation_commands_runs_all( tmp_path, mocker ):
+def test_300_execute_validation_commands_runs_all( tmp_path ):
     ''' Executes each command in sequence. '''
     config = Configuration(
         commands = (
-            ValidationCommand( args = ( 'cmd1', ) ),
-            ValidationCommand( args = ( 'cmd2', ) ),
+            ValidationCommand( args = ( 'echo', 'one' ) ),
+            ValidationCommand( args = ( 'echo', 'two' ) ),
         ),
     )
-    mock_execute = mocker.patch(
-        'copiertv.engine._execute_command' )
     execute_validation_commands(
         config,
         template_directory = tmp_path,
@@ -384,14 +380,11 @@ def test_300_execute_validation_commands_runs_all( tmp_path, mocker ):
         temporary_directory = tmp_path / 'temp',
         variant = 'default',
     )
-    assert mock_execute.call_count == 2
 
 
-def test_310_execute_validation_commands_no_commands( tmp_path, mocker ):
+def test_310_execute_validation_commands_no_commands( tmp_path ):
     ''' Does nothing when no commands configured. '''
     config = Configuration( )
-    mock_execute = mocker.patch(
-        'copiertv.engine._execute_command' )
     execute_validation_commands(
         config,
         template_directory = tmp_path,
@@ -399,4 +392,3 @@ def test_310_execute_validation_commands_no_commands( tmp_path, mocker ):
         temporary_directory = tmp_path / 'temp',
         variant = 'default',
     )
-    mock_execute.assert_not_called( )

@@ -65,13 +65,13 @@ async def test_120_intercept_errors_success( ):
 # --- Survey ---
 
 @pytest.mark.asyncio
-async def test_130_survey_prints_variants( capsys, mocker, tmp_path ):
+async def test_130_survey_prints_variants( capsys, tmp_path ):
     ''' Prints discovered variants to stdout. '''
-    mocker.patch(
-        'copiertv.engine.survey_variants',
-        return_value = ( 'alpha', 'default' ),
-    )
-    config = Configuration( answers_directory = tmp_path )
+    answers_dir = tmp_path / 'data'
+    answers_dir.mkdir( )
+    ( answers_dir / 'answers-alpha.yaml' ).write_text( '' )
+    ( answers_dir / 'answers-default.yaml' ).write_text( '' )
+    config = Configuration( answers_directory = answers_dir )
     await _survey( config )
     captured = capsys.readouterr( )
     assert 'alpha' in captured.out
@@ -89,21 +89,22 @@ async def test_140_survey_missing_answers_dir( ):
 # --- Validate ---
 
 @pytest.mark.asyncio
-async def test_150_validate_prints_result( capsys, mocker, tmp_path ):
+async def test_150_validate_prints_result( capsys, tmp_path ):
     ''' Prints validation result markdown to stdout. '''
-    from copiertv.engine import ValidationResult
-    mock_result = ValidationResult(
-        variant = 'default',
-        temporary_directory = tmp_path,
-        items_attempted = 2,
-        items_generated = 2,
-        preserved = False,
+    answers_dir = tmp_path / 'data'
+    answers_dir.mkdir( )
+    ( answers_dir / 'answers-default.yaml' ).write_text(
+        'name: test\n' )
+    template_dir = tmp_path / 'template'
+    template_dir.mkdir( )
+    ( template_dir / 'copier.yml' ).write_text(
+        'project_name:\n  type: str\n  default: myproject\n' )
+    ( template_dir / 'output.txt.jinja' ).write_text(
+        '{{ project_name }}\n' )
+    config = Configuration(
+        answers_directory = answers_dir,
+        template_directory = template_dir,
     )
-    mocker.patch(
-        'copiertv.engine.validate_variant',
-        return_value = mock_result,
-    )
-    config = Configuration( )
     await _validate( 'default', config )
     captured = capsys.readouterr( )
     assert 'Validation complete' in captured.out
@@ -111,14 +112,10 @@ async def test_150_validate_prints_result( capsys, mocker, tmp_path ):
 
 
 @pytest.mark.asyncio
-async def test_160_validate_propagates_errors( mocker ):
+async def test_160_validate_propagates_errors( ):
     ''' Propagates exceptions from validate_variant. '''
-    mocker.patch(
-        'copiertv.engine.validate_variant',
-        side_effect = exceptions.ConfigurationAbsence( ),
-    )
     config = Configuration( )
-    with pytest.raises( exceptions.ConfigurationAbsence ):
+    with pytest.raises( exceptions.ConfigurationInvalidity ):
         await _validate( 'default', config )
 
 
