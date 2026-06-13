@@ -133,7 +133,7 @@ def test_200_copy_template_basic( fs ):
         calls.append( ( src, dst, kwargs ) )
     copy_template(
         answers_path, project_dir, template_dir,
-        _copier_copy = fake_copier,
+        copier = fake_copier,
     )
     assert len( calls ) == 1
     src, dst, kwargs = calls[ 0 ]
@@ -156,7 +156,7 @@ def test_210_copy_template_with_vcs_ref( fs ):
     copy_template(
         answers_path, Path( '/output' ), Path( '/template' ),
         vcs_ref = 'v1.0',
-        _copier_copy = fake_copier,
+        copier = fake_copier,
     )
     assert calls[ 0 ][ 'vcs_ref' ] == 'v1.0'
 
@@ -172,7 +172,7 @@ def test_220_copy_template_with_unsafe( fs ):
     copy_template(
         answers_path, Path( '/output' ), Path( '/template' ),
         unsafe = True,
-        _copier_copy = fake_copier,
+        copier = fake_copier,
     )
     assert calls[ 0 ][ 'unsafe' ] is True
 
@@ -187,7 +187,7 @@ def test_230_copy_template_copier_error( fs ):
     with pytest.raises( exceptions.ConfigurationInvalidity ):
         copy_template(
             answers_path, Path( '/output' ), Path( '/template' ),
-            _copier_copy = failing_copier,
+            copier = failing_copier,
         )
 
 
@@ -204,11 +204,11 @@ def test_240_validate_variant_success( fs, tmp_path ):
         template_directory = tmp_path / 'template',
     )
     def fake_copier( src, dst, **kwargs ): pass
-    def fake_runner( args, **kwargs ): pass
+    def fake_executor( args, **kwargs ): pass
     result = validate_variant(
         'default', config,
-        _copier_copy = fake_copier,
-        _runner = fake_runner,
+        copier = fake_copier,
+        executor = fake_executor,
     )
     assert isinstance( result, ValidationResult )
     assert result.variant == 'default'
@@ -233,8 +233,8 @@ def test_260_validate_variant_missing_answers_file( fs, tmp_path ):
     with pytest.raises( exceptions.ConfigurationAbsence ):
         validate_variant(
             'nonexistent', config,
-            _copier_copy = lambda *a, **k: None,
-            _runner = lambda *a, **k: None,
+            copier = lambda *a, **k: None,
+            executor = lambda *a, **k: None,
         )
 
 
@@ -249,13 +249,13 @@ def test_270_validate_variant_command_failure_propagates( fs, tmp_path ):
         template_directory = tmp_path / 'template',
         commands = ( ValidationCommand( args = ( 'test', ) ), ),
     )
-    def failing_runner( args, **kwargs ):
+    def failing_executor( args, **kwargs ):
         raise CalledProcessError( 1, args )
     with pytest.raises( exceptions.ValidationCommandFailure ):
         validate_variant(
             'default', config,
-            _copier_copy = lambda *a, **k: None,
-            _runner = failing_runner,
+            copier = lambda *a, **k: None,
+            executor = failing_executor,
         )
 
 
@@ -273,8 +273,8 @@ def test_280_validate_variant_cleanup_on_success( fs, tmp_path, mocker ):
         'copiertv.engine._remove_temporary_directory' )
     validate_variant(
         'default', config,
-        _copier_copy = lambda *a, **k: None,
-        _runner = lambda *a, **k: None,
+        copier = lambda *a, **k: None,
+        executor = lambda *a, **k: None,
     )
     mock_remove.assert_called_once( )
 
@@ -294,8 +294,8 @@ def test_290_validate_variant_preserves_on_config( fs, tmp_path, mocker ):
         'copiertv.engine._remove_temporary_directory' )
     validate_variant(
         'default', config,
-        _copier_copy = lambda *a, **k: None,
-        _runner = lambda *a, **k: None,
+        copier = lambda *a, **k: None,
+        executor = lambda *a, **k: None,
     )
     mock_remove.assert_not_called( )
 
@@ -314,9 +314,9 @@ def test_300_execute_validation_commands_runs_all( tmp_path, mocker ):
         'copiertv.engine._execute_command' )
     execute_validation_commands(
         config,
-        template_dir = tmp_path,
-        project_dir = tmp_path / 'project',
-        temp_dir = tmp_path / 'temp',
+        template_directory = tmp_path,
+        project_directory = tmp_path / 'project',
+        temporary_directory = tmp_path / 'temp',
         variant = 'default',
     )
     assert mock_execute.call_count == 2
@@ -329,9 +329,9 @@ def test_310_execute_validation_commands_no_commands( tmp_path, mocker ):
         'copiertv.engine._execute_command' )
     execute_validation_commands(
         config,
-        template_dir = tmp_path,
-        project_dir = tmp_path / 'project',
-        temp_dir = tmp_path / 'temp',
+        template_directory = tmp_path,
+        project_directory = tmp_path / 'project',
+        temporary_directory = tmp_path / 'temp',
         variant = 'default',
     )
     mock_execute.assert_not_called( )

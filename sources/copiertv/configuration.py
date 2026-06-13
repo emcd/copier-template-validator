@@ -106,23 +106,23 @@ def detect_project_root( ) -> __.Path:
 
 def interpolate_command(
     command: ValidationCommand,
-    template_dir: __.Path,
-    project_dir: __.Path,
-    temp_dir: __.Path,
+    template_directory: __.Path,
+    project_directory: __.Path,
+    temporary_directory: __.Path,
     variant: str,
 ) -> tuple[ tuple[ str, ... ], __.Path ]:
     ''' Interpolates placeholders in command args and cwd. '''
     placeholders = {
-        '{template_dir}': str( template_dir ),
-        '{project_dir}': str( project_dir ),
-        '{temp_dir}': str( temp_dir ),
+        '{template_directory}': str( template_directory ),
+        '{project_directory}': str( project_directory ),
+        '{temporary_directory}': str( temporary_directory ),
         '{variant}': variant,
     }
     args = tuple(
         _interpolate_string( arg, placeholders )
         for arg in command.args
     )
-    if __.is_absent( command.cwd ): cwd = template_dir
+    if __.is_absent( command.cwd ): cwd = template_directory
     else: cwd = __.Path(
         _interpolate_string( command.cwd, placeholders ) )
     return args, cwd

@@ -45,10 +45,10 @@ def test_110_validation_command_with_cwd( ):
     ''' Creates command with args and cwd. '''
     cmd = ValidationCommand(
         args = ( 'make', 'test' ),
-        cwd = '{project_dir}',
+        cwd = '{project_directory}',
     )
     assert cmd.args == ( 'make', 'test' )
-    assert cmd.cwd == '{project_dir}'
+    assert cmd.cwd == '{project_directory}'
 
 
 def test_120_configuration_defaults( ):
@@ -89,40 +89,43 @@ def test_150_merge_configurations_override_preserve( ):
 
 def test_160_interpolate_command_basic( fs ):
     ''' Interpolates placeholders in args. '''
-    template_dir = Path( '/template' )
-    project_dir = Path( '/project' )
-    temp_dir = Path( '/temp' )
+    template_directory = Path( '/template' )
+    project_directory = Path( '/project' )
+    temporary_directory = Path( '/temp' )
     cmd = ValidationCommand(
-        args = ( 'check', '--source', '{project_dir}' ) )
+        args = ( 'check', '--source', '{project_directory}' ) )
     args, cwd = interpolate_command(
-        cmd, template_dir, project_dir, temp_dir, 'default' )
+        cmd, template_directory, project_directory,
+        temporary_directory, 'default' )
     assert args == ( 'check', '--source', '/project' )
-    assert cwd == template_dir
+    assert cwd == template_directory
 
 
 def test_170_interpolate_command_cwd_placeholder( fs ):
     ''' Interpolates cwd placeholder. '''
-    template_dir = Path( '/template' )
-    project_dir = Path( '/project' )
-    temp_dir = Path( '/temp' )
+    template_directory = Path( '/template' )
+    project_directory = Path( '/project' )
+    temporary_directory = Path( '/temp' )
     cmd = ValidationCommand(
         args = ( 'make', ),
-        cwd = '{project_dir}',
+        cwd = '{project_directory}',
     )
     _, cwd = interpolate_command(
-        cmd, template_dir, project_dir, temp_dir, 'default' )
-    assert cwd == project_dir
+        cmd, template_directory, project_directory,
+        temporary_directory, 'default' )
+    assert cwd == project_directory
 
 
 def test_180_interpolate_command_variant_placeholder( fs ):
     ''' Interpolates variant placeholder. '''
-    template_dir = Path( '/template' )
-    project_dir = Path( '/project' )
-    temp_dir = Path( '/temp' )
+    template_directory = Path( '/template' )
+    project_directory = Path( '/project' )
+    temporary_directory = Path( '/temp' )
     cmd = ValidationCommand(
         args = ( 'echo', '{variant}' ) )
     args, _ = interpolate_command(
-        cmd, template_dir, project_dir, temp_dir, 'maximum' )
+        cmd, template_directory, project_directory,
+        temporary_directory, 'maximum' )
     assert args == ( 'echo', 'maximum' )
 
 

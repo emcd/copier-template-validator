@@ -81,19 +81,19 @@ def _acquire_answers_file(
 
 def _execute_command(
     command: tuple[ str, ... ],
-    cwd: __.Path,
-    temp_dir: __.Path,
+    working_directory: __.Path,
+    temporary_directory: __.Path,
     preserve: bool,
-    _runner: __.cabc.Callable[ ..., __.typx.Any ] = __.subprocess.run,
+    executor: __.cabc.Callable[ ..., __.typx.Any ] = __.subprocess.run,
 ) -> None:
     ''' Runs a command and wraps errors. '''
-    try: _runner( command, cwd = cwd, check = True )
+    try: executor( command, cwd = working_directory, check = True )
     except FileNotFoundError as exception:
         raise _exceptions.ConfigurationInvalidity(
             str( exception ) ) from exception
     except __.subprocess.CalledProcessError as exception:
         temp_ref: __.Absential[ __.Path ] = (
-            temp_dir if preserve else __.absent )
+            temporary_directory if preserve else __.absent )
         raise _exceptions.ValidationCommandFailure(
             command, exception.returncode, temp_ref
         ) from exception
@@ -105,23 +105,23 @@ def copy_template( # noqa: PLR0913
     template_directory: __.Path,
     vcs_ref: __.Absential[ str ] = __.absent,
     unsafe: bool = False,
-    _answers_reader: __.cabc.Callable[
+    answers_reader: __.cabc.Callable[
         [ __.Path ], dict[ str, __.typx.Any ]
     ] = _acquire_answers_file,
-    _copier_copy: __.Absential[
+    copier: __.Absential[
         __.cabc.Callable[ ..., __.typx.Any ]
     ] = __.absent,
 ) -> None:
     ''' Copies template using Copier Python API. '''
     copier_copy: __.cabc.Callable[ ..., __.typx.Any ]
-    if __.is_absent( _copier_copy ):
+    if __.is_absent( copier ):
         try: from copier import run_copy as copier_copy
         except ImportError as exception:
             raise _exceptions.DependencyAbsence(
                 'copier' ) from exception
-    else: copier_copy = _copier_copy
+    else: copier_copy = copier
     copy_kwargs: dict[ str, __.typx.Any ] = dict(
-        data = _answers_reader( answers_file ),
+        data = answers_reader( answers_file ),
         defaults = True,
         overwrite = True,
         quiet = True,
@@ -141,20 +141,22 @@ def copy_template( # noqa: PLR0913
 
 def execute_validation_commands( # noqa: PLR0913
     config: _config.Configuration,
-    template_dir: __.Path,
-    project_dir: __.Path,
-    temp_dir: __.Path,
+    template_directory: __.Path,
+    project_directory: __.Path,
+    temporary_directory: __.Path,
     variant: str,
-    _runner: __.cabc.Callable[ ..., __.typx.Any ] = __.subprocess.run,
+    executor: __.cabc.Callable[ ..., __.typx.Any ] = __.subprocess.run,
 ) -> None:
     ''' Executes validation commands sequentially. '''
     for cmd in config.commands:
         args, cwd = _config.interpolate_command(
-            cmd, template_dir, project_dir, temp_dir, variant )
+            cmd, template_directory, project_directory,
+            temporary_directory, variant )
         _scribe.debug(
             f"Running validation command: {' '.join( args )}" )
         _execute_command(
-            args, cwd, temp_dir, config.preserve, _runner = _runner )
+            args, cwd, temporary_directory, config.preserve,
+            executor = executor )
 
 
 def survey_variants(
@@ -173,10 +175,10 @@ def survey_variants(
 def validate_variant(
     variant: str,
     config: _config.Configuration,
-    _copier_copy: __.Absential[
+    copier: __.Absential[
         __.cabc.Callable[ ..., __.typx.Any ]
     ] = __.absent,
-    _runner: __.cabc.Callable[ ..., __.typx.Any ] = __.subprocess.run,
+    executor: __.cabc.Callable[ ..., __.typx.Any ] = __.subprocess.run,
 ) -> ValidationResult:
     ''' Validates a single template variant. '''
     answers_dir = config.answers_directory
@@ -185,22 +187,23 @@ def validate_variant(
     answers_file = answers_dir / f"answers-{variant}.yaml"
     if not answers_file.is_file( ):
         raise _exceptions.ConfigurationAbsence( answers_file )
-    template_dir = _resolve_template_directory( config )
+    template_directory = _resolve_template_directory( config )
     _scribe.info( f"Validating variant: {variant}" )
-    temp_dir = _create_temporary_directory( variant )
+    temporary_directory = _create_temporary_directory( variant )
     try:
-        project_dir = temp_dir / variant
+        project_directory = temporary_directory / variant
         copy_template(
-            answers_file, project_dir, template_dir,
+            answers_file, project_directory, template_directory,
             config.vcs_ref, config.unsafe,
-            _copier_copy = _copier_copy )
+            copier = copier )
         execute_validation_commands(
-            config, template_dir, project_dir, temp_dir, variant,
-            _runner = _runner )
+            config, template_directory, project_directory,
+            temporary_directory, variant,
+            executor = executor )
         items = len( config.commands ) + 1
         result = ValidationResult(
             variant = variant,
-            temporary_directory = temp_dir,
+            temporary_directory = temporary_directory,
             items_attempted = items,
             items_generated = items,
             preserved = config.preserve,
@@ -209,10 +212,10 @@ def validate_variant(
         raise
     except Exception:
         if not config.preserve:
-            _remove_temporary_directory( temp_dir )
+            _remove_temporary_directory( temporary_directory )
         raise
     if not config.preserve:
-        _remove_temporary_directory( temp_dir )
+        _remove_temporary_directory( temporary_directory )
     return result
 
 
