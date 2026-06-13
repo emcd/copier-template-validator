@@ -174,11 +174,7 @@ def _acquire_project_configuration( ) -> Configuration:
 
 def _acquire_user_configuration( ) -> Configuration:
     ''' Acquires per-user configuration via platformdirs. '''
-    try:
-        import platformdirs
-    except ImportError as exception: # pragma: no cover
-        raise _exceptions.DependencyAbsence(
-            'platformdirs' ) from exception
+    import platformdirs
     config_dir = __.Path(
         platformdirs.user_config_dir( 'copiertv' ) )
     config_path = config_dir / 'general.toml'

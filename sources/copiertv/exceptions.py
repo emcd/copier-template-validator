@@ -65,13 +65,6 @@ class ConfigurationInvalidity( Omnierror, ValueError ):
         return ( f"\u274c {self}", )
 
 
-class DependencyAbsence( ConfigurationInvalidity ):
-    ''' Required dependency is not installed. '''
-
-    def __init__( self, package_name: str ) -> None:
-        super( ).__init__( f"{package_name} is not installed" )
-
-
 class DataInvalidity( ConfigurationInvalidity ):
     ''' Data file content is invalid. '''
 

@@ -323,6 +323,48 @@ def test_295_validate_variant_cleanup_on_exception( fs, tmp_path, mocker ):
     mock_remove.assert_called_once( )
 
 
+def test_296_validate_variant_missing_template_directory( fs, tmp_path ):
+    ''' Raises ConfigurationInvalidity when template directory absent. '''
+    answers_dir = tmp_path / 'data'
+    answers_dir.mkdir( )
+    answers_file = answers_dir / 'answers-default.yaml'
+    answers_file.write_text( 'name: test\n' )
+    config = Configuration(
+        answers_directory = answers_dir,
+        # template_directory is absent
+    )
+    with pytest.raises( exceptions.ConfigurationInvalidity ):
+        validate_variant(
+            'default', config,
+            copier = lambda *a, **k: None,
+            executor = lambda *a, **k: None,
+        )
+
+
+def test_297_validate_variant_cleanup_preserve( fs, tmp_path, mocker ):
+    ''' Skips cleanup when preserve=True and exception occurs. '''
+    answers_dir = tmp_path / 'data'
+    answers_dir.mkdir( )
+    answers_file = answers_dir / 'answers-default.yaml'
+    answers_file.write_text( 'name: test\n' )
+    config = Configuration(
+        answers_directory = answers_dir,
+        template_directory = tmp_path / 'template',
+        preserve = True,
+    )
+    mock_remove = mocker.patch(
+        'copiertv.engine._remove_temporary_directory' )
+    def failing_copier( *a, **k ):
+        raise RuntimeError( 'unexpected' )
+    with pytest.raises( exceptions.ConfigurationInvalidity ):
+        validate_variant(
+            'default', config,
+            copier = failing_copier,
+            executor = lambda *a, **k: None,
+        )
+    mock_remove.assert_not_called( )
+
+
 # --- ExecuteValidationCommands ---
 
 def test_300_execute_validation_commands_runs_all( tmp_path, mocker ):

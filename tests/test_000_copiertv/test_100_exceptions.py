@@ -27,7 +27,6 @@ from copiertv.exceptions import (
     ConfigurationAbsence,
     ConfigurationInvalidity,
     DataInvalidity,
-    DependencyAbsence,
     FileOperationFailure,
     Omnierror,
     ValidationCommandFailure,
@@ -81,12 +80,6 @@ def test_150_configuration_invalidity_with_exception( ):
     cause = ValueError( 'oops' )
     exc = ConfigurationInvalidity( cause )
     assert 'oops' in str( exc )
-
-
-def test_160_dependency_absence_message( ):
-    ''' Includes package name in message. '''
-    exc = DependencyAbsence( 'copier' )
-    assert 'copier' in str( exc )
 
 
 def test_170_data_invalidity_message( ):
@@ -156,7 +149,6 @@ def test_220_inheritance_omnierror( ):
         ConfigurationAbsence,
         ConfigurationInvalidity,
         DataInvalidity,
-        DependencyAbsence,
         FileOperationFailure,
         ValidationCommandFailure,
     ]

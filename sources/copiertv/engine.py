@@ -62,9 +62,7 @@ def _acquire_answers_file(
     path: __.Path,
 ) -> dict[ str, __.typx.Any ]:
     ''' Reads a YAML answers file. '''
-    try: import yaml
-    except ImportError as exception: # pragma: no cover
-        raise _exceptions.DependencyAbsence( 'pyyaml' ) from exception
+    import yaml
     try: content = path.read_text( encoding = 'utf-8' )
     except ( OSError, IOError ) as exception: # pragma: no cover
         raise _exceptions.FileOperationFailure(
@@ -121,10 +119,7 @@ def copy_template( # noqa: PLR0913
     ''' Copies template using Copier Python API. '''
     copier_copy: __.cabc.Callable[ ..., __.typx.Any ]
     if __.is_absent( copier ):
-        try: from copier import run_copy as copier_copy
-        except ImportError as exception: # pragma: no cover
-            raise _exceptions.DependencyAbsence(
-                'copier' ) from exception
+        from copier import run_copy as copier_copy
     else: copier_copy = copier
     copy_kwargs: dict[ str, __.typx.Any ] = dict(
         data = answers_reader( answers_file ),
@@ -245,7 +240,7 @@ def _remove_temporary_directory( path: __.Path ) -> None:
 def _resolve_template_directory(
     config: _config.Configuration,
 ) -> __.Path:
-    ''' Resolves template directory from config or CWD. '''
+    ''' Resolves template directory from configuration. '''
     if not __.is_absent( config.template_directory ):
         return config.template_directory
-    return __.Path.cwd( )
+    raise _exceptions.ConfigurationInvalidity( )
