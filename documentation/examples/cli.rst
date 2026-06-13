@@ -18,10 +18,67 @@
 
 
 *******************************************************************************
-Examples
+CLI Examples
 *******************************************************************************
 
-.. toctree::
-   :maxdepth: 2
 
-   cli
+Surveying Variants
+===============================================================================
+
+List available template variants from an answers directory:
+
+.. code-block:: bash
+
+    copiertv survey
+
+This reads the answers directory from your configuration and prints variant
+names to stdout.
+
+
+Validating Variants
+===============================================================================
+
+Validate a single variant:
+
+.. code-block:: bash
+
+    copiertv validate default
+
+Validate and preserve the generated project for inspection:
+
+.. code-block:: bash
+
+    copiertv validate --preserve default
+
+
+Configuration
+===============================================================================
+
+Create ``.auxiliary/configuration/copiertv/general.toml`` in your template
+repository:
+
+.. code-block:: toml
+
+    [answers]
+    directory = "data/copier"
+
+    [[commands]]
+    args = ["hatch", "env", "prune"]
+
+    [[commands]]
+    args = ["hatch", "--env", "develop", "run", "make-all"]
+
+    [options]
+    preserve = false
+    unsafe = false
+
+Use placeholders in command arguments and working directories:
+
+.. code-block:: toml
+
+    [[commands]]
+    args = ["make", "check", "--source", "{project_directory}"]
+    cwd = "{template_directory}"
+
+Available placeholders: ``{template_directory}``, ``{project_directory}``,
+``{temporary_directory}``, ``{variant}``.

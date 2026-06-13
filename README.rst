@@ -57,13 +57,13 @@ Key Features
   TOML configuration file. The tool is agnostic about what gets validated.
 - **Configurable answers directory**: Specify where variant answer files
   live. No hardcoded convention imposed.
-- **Placeholder interpolation**: Use ``{template_dir}``,
-  ``{project_dir}``, ``{temp_dir}``, and ``{variant}`` in command args
-  and working directories.
+- **Placeholder interpolation**: Use ``{template_directory}``,
+  ``{project_directory}``, ``{temporary_directory}``, and ``{variant}``
+  in command args and working directories.
 - **Copier Python API**: Uses ``copier.run_copy`` directly instead of
   shelling out to a subprocess.
-- **Configuration hierarchy**: CLI arguments, environment variable,
-  per-project config, and per-user config with clear precedence.
+- **Configuration hierarchy**: CLI arguments, per-project config, and
+  per-user config (via ``emcd-appcore``) with clear precedence.
 - **Structured error handling**: Domain-specific exceptions with
   Markdown rendering for terminal display.
 
@@ -154,11 +154,11 @@ template repository::
 Commands support placeholder interpolation for paths::
 
     [[commands]]
-    args = ["make", "check", "--source", "{project_dir}"]
-    cwd = "{template_dir}"
+    args = ["make", "check", "--source", "{project_directory}"]
+    cwd = "{template_directory}"
 
-Available placeholders: ``{template_dir}``, ``{project_dir}``,
-``{temp_dir}``, ``{variant}``.
+Available placeholders: ``{template_directory}``, ``{project_directory}``,
+``{temporary_directory}``, ``{variant}``.
 
 
 Contribution 🤝
