@@ -137,9 +137,13 @@ class _CommandDispatcher:
         await self.command( )
 
 
-def execute( ) -> None:
+def execute(
+    main: __.cabc.Callable[
+        ..., __.cabc.Coroutine[ __.typx.Any, __.typx.Any, None ]
+    ] = _main,
+) -> None:
     ''' Entrypoint for CLI execution. '''
     from asyncio import run
-    try: run( _main( ) )
+    try: run( main( ) )
     except SystemExit: raise
     except BaseException: raise SystemExit( 1 ) from None

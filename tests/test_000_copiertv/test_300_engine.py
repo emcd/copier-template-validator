@@ -300,6 +300,29 @@ def test_290_validate_variant_preserves_on_config( fs, tmp_path, mocker ):
     mock_remove.assert_not_called( )
 
 
+def test_295_validate_variant_cleanup_on_exception( fs, tmp_path, mocker ):
+    ''' Removes temp directory when copier raises unexpected error. '''
+    answers_dir = tmp_path / 'data'
+    answers_dir.mkdir( )
+    answers_file = answers_dir / 'answers-default.yaml'
+    answers_file.write_text( 'name: test\n' )
+    config = Configuration(
+        answers_directory = answers_dir,
+        template_directory = tmp_path / 'template',
+    )
+    mock_remove = mocker.patch(
+        'copiertv.engine._remove_temporary_directory' )
+    def failing_copier( *a, **k ):
+        raise RuntimeError( 'unexpected' )
+    with pytest.raises( exceptions.ConfigurationInvalidity ):
+        validate_variant(
+            'default', config,
+            copier = failing_copier,
+            executor = lambda *a, **k: None,
+        )
+    mock_remove.assert_called_once( )
+
+
 # --- ExecuteValidationCommands ---
 
 def test_300_execute_validation_commands_runs_all( tmp_path, mocker ):

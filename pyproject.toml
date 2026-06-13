@@ -71,6 +71,9 @@ gha-runners = [
 branch = true
 command_line = '-m pytest'
 data_file = '.auxiliary/caches/pytest/coverage.sqlite3'
+omit = [
+    'sources/copiertv/__main__.py',
+]
 parallel = true
 source = [ 'sources' ]
 [tool.coverage.html]
@@ -267,6 +270,8 @@ python_functions = [ 'test_[0-9][0-9][0-9]_*' ]
 cache_dir = '.auxiliary/caches/pytest'
 markers = [
     "slow: long-running tests",
+]
+filterwarnings = [
 ]
 
 [tool.ruff]

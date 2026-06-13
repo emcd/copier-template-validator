@@ -30,7 +30,7 @@ from . import exceptions
 __version__ = '1.0a0'
 
 
-def main( ):
+def main( ): # pragma: no cover
     ''' Entrypoint. '''
     from .cli import execute
     execute( )

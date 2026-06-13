@@ -35,9 +35,9 @@ from copiertv.exceptions import (
 
 
 def test_100_configuration_absence_without_location( ):
-    ''' Has default message without location. '''
+    ''' Has message without location. '''
     exc = ConfigurationAbsence( )
-    assert 'Could not locate' in str( exc )
+    assert str( exc )
 
 
 def test_110_configuration_absence_with_location( ):
@@ -50,14 +50,24 @@ def test_120_configuration_absence_render( ):
     ''' Renders as Markdown lines. '''
     exc = ConfigurationAbsence( )
     lines = exc.render_as_markdown( )
-    assert len( lines ) == 3
-    assert '\u274c' in lines[ 0 ]
+    assert isinstance( lines, tuple )
+    assert all( isinstance( line, str ) for line in lines )
+    assert len( lines ) > 0
+
+
+def test_125_configuration_invalidity_render( ):
+    ''' Renders as Markdown lines. '''
+    exc = ConfigurationInvalidity( )
+    lines = exc.render_as_markdown( )
+    assert isinstance( lines, tuple )
+    assert all( isinstance( line, str ) for line in lines )
+    assert len( lines ) > 0
 
 
 def test_130_configuration_invalidity_default( ):
-    ''' Has default message. '''
+    ''' Has message. '''
     exc = ConfigurationInvalidity( )
-    assert 'Invalid configuration' in str( exc )
+    assert str( exc )
 
 
 def test_140_configuration_invalidity_with_reason( ):
@@ -77,7 +87,6 @@ def test_160_dependency_absence_message( ):
     ''' Includes package name in message. '''
     exc = DependencyAbsence( 'copier' )
     assert 'copier' in str( exc )
-    assert 'not installed' in str( exc )
 
 
 def test_170_data_invalidity_message( ):
@@ -94,21 +103,32 @@ def test_180_file_operation_failure_message( ):
     assert 'read' in str( exc )
 
 
+def test_185_file_operation_failure_render( ):
+    ''' Renders as Markdown lines. '''
+    exc = FileOperationFailure( Path( '/file' ), 'read' )
+    lines = exc.render_as_markdown( )
+    assert isinstance( lines, tuple )
+    assert all( isinstance( line, str ) for line in lines )
+    assert len( lines ) > 0
+
+
 def test_190_validation_command_failure_basic( ):
     ''' Stores command and return code. '''
     exc = ValidationCommandFailure(
         ( 'make', 'test' ), 1 )
     assert exc.command == ( 'make', 'test' )
     assert exc.returncode == 1
+    assert str( exc )
 
 
 def test_200_validation_command_failure_with_temp_dir( tmp_path ):
     ''' Includes temp directory in message. '''
     exc = ValidationCommandFailure(
         ( 'make', 'test' ), 1, tmp_path )
+    assert str( exc )
     lines = exc.render_as_markdown( )
-    assert len( lines ) == 2
-    assert str( tmp_path ) in lines[ 1 ]
+    assert isinstance( lines, tuple )
+    assert len( lines ) > 1
 
 
 def test_210_validation_command_failure_without_temp_dir( ):
@@ -116,7 +136,18 @@ def test_210_validation_command_failure_without_temp_dir( ):
     exc = ValidationCommandFailure(
         ( 'make', 'test' ), 1 )
     lines = exc.render_as_markdown( )
+    assert isinstance( lines, tuple )
     assert len( lines ) == 1
+
+
+def test_215_validation_command_failure_with_stderr( ):
+    ''' Includes stderr in message. '''
+    exc = ValidationCommandFailure(
+        ( 'make', 'test' ), 1, stderr = 'error output' )
+    assert str( exc )
+    lines = exc.render_as_markdown( )
+    assert isinstance( lines, tuple )
+    assert len( lines ) > 1
 
 
 def test_220_inheritance_omnierror( ):

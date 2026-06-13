@@ -176,10 +176,11 @@ def _acquire_user_configuration( ) -> Configuration:
     ''' Acquires per-user configuration via platformdirs. '''
     try:
         import platformdirs
-        config_dir = __.Path(
-            platformdirs.user_config_dir( 'copiertv' ) )
-    except ImportError:
-        return Configuration( )
+    except ImportError as exception: # pragma: no cover
+        raise _exceptions.DependencyAbsence(
+            'platformdirs' ) from exception
+    config_dir = __.Path(
+        platformdirs.user_config_dir( 'copiertv' ) )
     config_path = config_dir / 'general.toml'
     if not config_path.is_file( ): return Configuration( )
     return parse_toml_configuration( config_path )

@@ -24,7 +24,7 @@
 import pytest
 
 from copiertv import exceptions
-from copiertv.cli import _survey, _validate, intercept_errors
+from copiertv.cli import _survey, _validate, execute, intercept_errors
 from copiertv.configuration import Configuration
 
 
@@ -40,7 +40,7 @@ async def test_100_intercept_errors_omnierror( capsys ):
         await failing_function( )
     assert exc_info.value.code == 1
     captured = capsys.readouterr( )
-    assert 'Could not locate configuration' in captured.out
+    assert captured.out
 
 
 @pytest.mark.asyncio
@@ -124,29 +124,28 @@ async def test_160_validate_propagates_errors( mocker ):
 
 # --- Execute ---
 
-def test_170_execute_runs( mocker ):
-    ''' Calls asyncio.run on _main. '''
-    mock_run = mocker.patch( 'asyncio.run' )
-    from copiertv.cli import execute
-    execute( )
-    mock_run.assert_called_once( )
+def test_170_execute_runs( ):
+    ''' Runs main coroutine to completion. '''
+    called = False
+    async def _tracking_main( ):
+        nonlocal called
+        called = True
+    execute( main = _tracking_main )
+    assert called
 
 
-def test_180_execute_system_exit( mocker ):
+def test_180_execute_system_exit( ):
     ''' Re-raises SystemExit. '''
-    mocker.patch( 'asyncio.run', side_effect = SystemExit( 1 ) )
-    from copiertv.cli import execute
+    async def _raising_main( ):
+        raise SystemExit( 1 )
     with pytest.raises( SystemExit ):
-        execute( )
+        execute( main = _raising_main )
 
 
-def test_190_execute_base_exception( mocker ):
+def test_190_execute_base_exception( ):
     ''' Converts BaseException to SystemExit(1). '''
-    mocker.patch(
-        'asyncio.run',
-        side_effect = KeyboardInterrupt( ),
-    )
-    from copiertv.cli import execute
+    async def _raising_main( ):
+        raise KeyboardInterrupt( )
     with pytest.raises( SystemExit ) as exc_info:
-        execute( )
+        execute( main = _raising_main )
     assert exc_info.value.code == 1

@@ -63,17 +63,17 @@ def _acquire_answers_file(
 ) -> dict[ str, __.typx.Any ]:
     ''' Reads a YAML answers file. '''
     try: import yaml
-    except ImportError as exception:
+    except ImportError as exception: # pragma: no cover
         raise _exceptions.DependencyAbsence( 'pyyaml' ) from exception
     try: content = path.read_text( encoding = 'utf-8' )
-    except ( OSError, IOError ) as exception:
+    except ( OSError, IOError ) as exception: # pragma: no cover
         raise _exceptions.FileOperationFailure(
             path, 'read answers file' ) from exception
     try: data: dict[ str, __.typx.Any ] = yaml.safe_load( content )
-    except Exception as exception:
+    except Exception as exception: # pragma: no cover
         raise _exceptions.DataInvalidity(
             path, 'Invalid YAML' ) from exception
-    if not isinstance( data, dict ):
+    if not isinstance( data, dict ): # pragma: no cover
         raise _exceptions.DataInvalidity(
             path, 'Answers file must be a mapping' )
     return data
@@ -122,7 +122,7 @@ def copy_template( # noqa: PLR0913
     copier_copy: __.cabc.Callable[ ..., __.typx.Any ]
     if __.is_absent( copier ):
         try: from copier import run_copy as copier_copy
-        except ImportError as exception:
+        except ImportError as exception: # pragma: no cover
             raise _exceptions.DependencyAbsence(
                 'copier' ) from exception
     else: copier_copy = copier
@@ -229,7 +229,7 @@ def _create_temporary_directory( variant: str ) -> __.Path:
     ''' Creates a temporary directory for validation. '''
     try: return __.Path( __.tempfile.mkdtemp(
         prefix = f"copiertv-{variant}-" ) )
-    except ( OSError, IOError ) as exception:
+    except ( OSError, IOError ) as exception: # pragma: no cover
         raise _exceptions.FileOperationFailure(
             __.Path( __.tempfile.gettempdir( ) ),
             'create temporary directory' ) from exception
