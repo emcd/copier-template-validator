@@ -26,6 +26,7 @@
 import collections.abc as cabc
 import contextlib    as ctxl
 import dataclasses   as dcls
+import functools
 import logging
 import os
 import shutil

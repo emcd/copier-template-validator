@@ -24,6 +24,36 @@
 from . import __
 from . import configuration as _configuration
 from . import engine as _engine
+from . import exceptions as _exceptions
+
+
+def intercept_errors( ) -> __.cabc.Callable[
+    [ __.cabc.Callable[
+        ..., __.cabc.Coroutine[ __.typx.Any, __.typx.Any, None ] ] ],
+    __.cabc.Callable[
+        ..., __.cabc.Coroutine[ __.typx.Any, __.typx.Any, None ] ]
+]:
+    ''' Decorator that catches Omnierror for CLI display. '''
+    def decorator(
+        function: __.cabc.Callable[
+            ..., __.cabc.Coroutine[ __.typx.Any, __.typx.Any, None ] ]
+    ) -> __.cabc.Callable[
+        ..., __.cabc.Coroutine[ __.typx.Any, __.typx.Any, None ]
+    ]:
+        @__.functools.wraps( function )
+        async def wrapper(
+            *args: __.typx.Any, **kwargs: __.typx.Any
+        ) -> None:
+            try: await function( *args, **kwargs )
+            except _exceptions.Omnierror as exc:
+                renderer = getattr(
+                    exc, 'render_as_markdown', None )
+                if renderer:
+                    lines = renderer( )
+                    print( '\n'.join( lines ) )
+                raise SystemExit( 1 ) from exc
+        return wrapper
+    return decorator
 
 
 async def _survey( config: _configuration.Configuration ) -> None:
@@ -46,7 +76,7 @@ async def _validate(
     print( '\n'.join( lines ) )
 
 
-@_engine.intercept_errors( )
+@intercept_errors( )
 async def _main( ) -> None:
     ''' Entrypoint for CLI execution. '''
     config = (

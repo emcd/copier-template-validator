@@ -22,112 +22,316 @@
 
 
 from pathlib import Path
+from subprocess import CalledProcessError
 
 import pytest
 
 from copiertv import exceptions
-from copiertv.configuration import _interpolate_string
+from copiertv.configuration import (
+    Configuration,
+    ValidationCommand,
+)
 from copiertv.engine import (
     ValidationResult,
+    copy_template,
+    execute_validation_commands,
     survey_variants,
+    validate_variant,
 )
 
 
-class TestSurveyVariants:
-    ''' Tests for variant discovery. '''
+# --- SurveyVariants ---
 
-    def test_000_variants_found( self, fs ):
-        ''' Discovers variants from answers files. '''
-        answers_dir = Path( '/project/data/copier' )
-        fs.create_file( answers_dir / 'answers-default.yaml' )
-        fs.create_file( answers_dir / 'answers-maximum.yaml' )
-        result = survey_variants( answers_dir )
-        assert result == ( 'default', 'maximum' )
-
-    def test_010_no_variants( self, fs ):
-        ''' Returns empty tuple when no answers files exist. '''
-        answers_dir = Path( '/project/data/copier' )
-        fs.create_dir( answers_dir )
-        result = survey_variants( answers_dir )
-        assert result == ( )
-
-    def test_020_missing_directory( self, fs ):
-        ''' Raises ConfigurationAbsence for missing directory. '''
-        answers_dir = Path( '/nonexistent' )
-        with pytest.raises( exceptions.ConfigurationAbsence ):
-            survey_variants( answers_dir )
-
-    def test_030_ignores_non_matching( self, fs ):
-        ''' Ignores files that do not match pattern. '''
-        answers_dir = Path( '/project/data/copier' )
-        fs.create_file( answers_dir / 'answers-default.yaml' )
-        fs.create_file( answers_dir / 'README.md' )
-        fs.create_file( answers_dir / 'other.yaml' )
-        result = survey_variants( answers_dir )
-        assert result == ( 'default', )
-
-    def test_040_sorted( self, fs ):
-        ''' Returns variants in sorted order. '''
-        answers_dir = Path( '/project/data/copier' )
-        fs.create_file( answers_dir / 'answers-maximum.yaml' )
-        fs.create_file( answers_dir / 'answers-alpha.yaml' )
-        fs.create_file( answers_dir / 'answers-default.yaml' )
-        result = survey_variants( answers_dir )
-        assert result == ( 'alpha', 'default', 'maximum' )
+def test_100_survey_variants_found( fs ):
+    ''' Discovers variants from answers files. '''
+    answers_dir = Path( '/project/data/copier' )
+    fs.create_file( answers_dir / 'answers-default.yaml' )
+    fs.create_file( answers_dir / 'answers-maximum.yaml' )
+    result = survey_variants( answers_dir )
+    assert result == ( 'default', 'maximum' )
 
 
-class TestInterpolateString:
-    ''' Tests for placeholder interpolation. '''
-
-    def test_000_basic( self ):
-        ''' Replaces single placeholder. '''
-        placeholders = { '{name}': 'world' }
-        result = _interpolate_string( 'hello {name}', placeholders )
-        assert result == 'hello world'
-
-    def test_010_multiple( self ):
-        ''' Replaces multiple placeholders. '''
-        placeholders = {
-            '{a}': '1',
-            '{b}': '2',
-        }
-        result = _interpolate_string( '{a} and {b}', placeholders )
-        assert result == '1 and 2'
-
-    def test_020_no_placeholders( self ):
-        ''' Returns string unchanged when no placeholders match. '''
-        result = _interpolate_string( 'plain text', { } )
-        assert result == 'plain text'
+def test_110_survey_variants_no_variants( fs ):
+    ''' Returns empty tuple when no answers files exist. '''
+    answers_dir = Path( '/project/data/copier' )
+    fs.create_dir( answers_dir )
+    result = survey_variants( answers_dir )
+    assert result == ( )
 
 
-class TestValidationResult:
-    ''' Tests for result rendering. '''
+def test_120_survey_variants_missing_directory( fs ):
+    ''' Raises ConfigurationAbsence for missing directory. '''
+    answers_dir = Path( '/nonexistent' )
+    with pytest.raises( exceptions.ConfigurationAbsence ):
+        survey_variants( answers_dir )
 
-    def test_000_render_success( self, tmp_path ):
-        ''' Renders successful validation result. '''
-        result = ValidationResult(
-            variant = 'default',
-            temporary_directory = tmp_path,
-            items_attempted = 2,
-            items_generated = 2,
-            preserved = False,
+
+def test_130_survey_variants_ignores_non_matching( fs ):
+    ''' Ignores files that do not match pattern. '''
+    answers_dir = Path( '/project/data/copier' )
+    fs.create_file( answers_dir / 'answers-default.yaml' )
+    fs.create_file( answers_dir / 'README.md' )
+    fs.create_file( answers_dir / 'other.yaml' )
+    result = survey_variants( answers_dir )
+    assert result == ( 'default', )
+
+
+def test_140_survey_variants_sorted( fs ):
+    ''' Returns variants in sorted order. '''
+    answers_dir = Path( '/project/data/copier' )
+    fs.create_file( answers_dir / 'answers-maximum.yaml' )
+    fs.create_file( answers_dir / 'answers-alpha.yaml' )
+    fs.create_file( answers_dir / 'answers-default.yaml' )
+    result = survey_variants( answers_dir )
+    assert result == ( 'alpha', 'default', 'maximum' )
+
+
+# --- ValidationResult ---
+
+def test_180_validation_result_render_success( tmp_path ):
+    ''' Renders successful validation result. '''
+    result = ValidationResult(
+        variant = 'default',
+        temporary_directory = tmp_path,
+        items_attempted = 2,
+        items_generated = 2,
+        preserved = False,
+    )
+    lines = result.render_as_markdown( )
+    assert len( lines ) == 4
+    assert 'default' in lines[ 0 ]
+    assert str( tmp_path ) in lines[ 1 ]
+    assert '2/2' in lines[ 2 ]
+    assert 'cleaned up' in lines[ 3 ]
+
+
+def test_190_validation_result_render_preserved( tmp_path ):
+    ''' Renders result with preserved directory. '''
+    result = ValidationResult(
+        variant = 'maximum',
+        temporary_directory = tmp_path,
+        items_attempted = 3,
+        items_generated = 3,
+        preserved = True,
+    )
+    lines = result.render_as_markdown( )
+    assert len( lines ) == 4
+    assert 'preserved' in lines[ 3 ].lower( )
+
+
+# --- CopyTemplate ---
+
+def test_200_copy_template_basic( fs ):
+    ''' Calls copier with correct arguments. '''
+    answers_path = Path( '/data/answers-default.yaml' )
+    fs.create_file(
+        answers_path, contents = 'name: test\n' )
+    project_dir = Path( '/output' )
+    template_dir = Path( '/template' )
+    calls = [ ]
+    def fake_copier( src, dst, **kwargs ):
+        calls.append( ( src, dst, kwargs ) )
+    copy_template(
+        answers_path, project_dir, template_dir,
+        _copier_copy = fake_copier,
+    )
+    assert len( calls ) == 1
+    src, dst, kwargs = calls[ 0 ]
+    assert src == str( template_dir )
+    assert dst == project_dir
+    assert kwargs[ 'data' ] == { 'name': 'test' }
+    assert kwargs[ 'defaults' ] is True
+    assert kwargs[ 'overwrite' ] is True
+    assert kwargs[ 'quiet' ] is True
+
+
+def test_210_copy_template_with_vcs_ref( fs ):
+    ''' Forwards vcs_ref to copier. '''
+    answers_path = Path( '/data/answers-default.yaml' )
+    fs.create_file(
+        answers_path, contents = 'name: test\n' )
+    calls = [ ]
+    def fake_copier( src, dst, **kwargs ):
+        calls.append( kwargs )
+    copy_template(
+        answers_path, Path( '/output' ), Path( '/template' ),
+        vcs_ref = 'v1.0',
+        _copier_copy = fake_copier,
+    )
+    assert calls[ 0 ][ 'vcs_ref' ] == 'v1.0'
+
+
+def test_220_copy_template_with_unsafe( fs ):
+    ''' Forwards unsafe flag to copier. '''
+    answers_path = Path( '/data/answers-default.yaml' )
+    fs.create_file(
+        answers_path, contents = 'name: test\n' )
+    calls = [ ]
+    def fake_copier( src, dst, **kwargs ):
+        calls.append( kwargs )
+    copy_template(
+        answers_path, Path( '/output' ), Path( '/template' ),
+        unsafe = True,
+        _copier_copy = fake_copier,
+    )
+    assert calls[ 0 ][ 'unsafe' ] is True
+
+
+def test_230_copy_template_copier_error( fs ):
+    ''' Wraps copier exceptions as ConfigurationInvalidity. '''
+    answers_path = Path( '/data/answers-default.yaml' )
+    fs.create_file(
+        answers_path, contents = 'name: test\n' )
+    def failing_copier( src, dst, **kwargs ):
+        raise RuntimeError( 'copier failed' )
+    with pytest.raises( exceptions.ConfigurationInvalidity ):
+        copy_template(
+            answers_path, Path( '/output' ), Path( '/template' ),
+            _copier_copy = failing_copier,
         )
-        lines = result.render_as_markdown( )
-        assert len( lines ) == 4
-        assert 'default' in lines[ 0 ]
-        assert str( tmp_path ) in lines[ 1 ]
-        assert '2/2' in lines[ 2 ]
-        assert 'cleaned up' in lines[ 3 ]
 
-    def test_010_render_preserved( self, tmp_path ):
-        ''' Renders result with preserved directory. '''
-        result = ValidationResult(
-            variant = 'maximum',
-            temporary_directory = tmp_path,
-            items_attempted = 3,
-            items_generated = 3,
-            preserved = True,
+
+# --- ValidateVariant ---
+
+def test_240_validate_variant_success( fs, tmp_path ):
+    ''' Returns ValidationResult on success. '''
+    answers_dir = tmp_path / 'data'
+    answers_dir.mkdir( )
+    answers_file = answers_dir / 'answers-default.yaml'
+    answers_file.write_text( 'name: test\n' )
+    config = Configuration(
+        answers_directory = answers_dir,
+        template_directory = tmp_path / 'template',
+    )
+    def fake_copier( src, dst, **kwargs ): pass
+    def fake_runner( args, **kwargs ): pass
+    result = validate_variant(
+        'default', config,
+        _copier_copy = fake_copier,
+        _runner = fake_runner,
+    )
+    assert isinstance( result, ValidationResult )
+    assert result.variant == 'default'
+    assert result.items_attempted == 1
+
+
+def test_250_validate_variant_missing_answers_dir( ):
+    ''' Raises ConfigurationInvalidity when answers dir absent. '''
+    config = Configuration( )
+    with pytest.raises( exceptions.ConfigurationInvalidity ):
+        validate_variant( 'default', config )
+
+
+def test_260_validate_variant_missing_answers_file( fs, tmp_path ):
+    ''' Raises ConfigurationAbsence for missing variant file. '''
+    answers_dir = tmp_path / 'data'
+    answers_dir.mkdir( )
+    config = Configuration(
+        answers_directory = answers_dir,
+        template_directory = tmp_path / 'template',
+    )
+    with pytest.raises( exceptions.ConfigurationAbsence ):
+        validate_variant(
+            'nonexistent', config,
+            _copier_copy = lambda *a, **k: None,
+            _runner = lambda *a, **k: None,
         )
-        lines = result.render_as_markdown( )
-        assert len( lines ) == 4
-        assert 'preserved' in lines[ 3 ].lower( )
+
+
+def test_270_validate_variant_command_failure_propagates( fs, tmp_path ):
+    ''' Propagates ValidationCommandFailure from commands. '''
+    answers_dir = tmp_path / 'data'
+    answers_dir.mkdir( )
+    answers_file = answers_dir / 'answers-default.yaml'
+    answers_file.write_text( 'name: test\n' )
+    config = Configuration(
+        answers_directory = answers_dir,
+        template_directory = tmp_path / 'template',
+        commands = ( ValidationCommand( args = ( 'test', ) ), ),
+    )
+    def failing_runner( args, **kwargs ):
+        raise CalledProcessError( 1, args )
+    with pytest.raises( exceptions.ValidationCommandFailure ):
+        validate_variant(
+            'default', config,
+            _copier_copy = lambda *a, **k: None,
+            _runner = failing_runner,
+        )
+
+
+def test_280_validate_variant_cleanup_on_success( fs, tmp_path, mocker ):
+    ''' Removes temp directory when preserve is False. '''
+    answers_dir = tmp_path / 'data'
+    answers_dir.mkdir( )
+    answers_file = answers_dir / 'answers-default.yaml'
+    answers_file.write_text( 'name: test\n' )
+    config = Configuration(
+        answers_directory = answers_dir,
+        template_directory = tmp_path / 'template',
+    )
+    mock_remove = mocker.patch(
+        'copiertv.engine._remove_temporary_directory' )
+    validate_variant(
+        'default', config,
+        _copier_copy = lambda *a, **k: None,
+        _runner = lambda *a, **k: None,
+    )
+    mock_remove.assert_called_once( )
+
+
+def test_290_validate_variant_preserves_on_config( fs, tmp_path, mocker ):
+    ''' Keeps temp directory when preserve is True. '''
+    answers_dir = tmp_path / 'data'
+    answers_dir.mkdir( )
+    answers_file = answers_dir / 'answers-default.yaml'
+    answers_file.write_text( 'name: test\n' )
+    config = Configuration(
+        answers_directory = answers_dir,
+        template_directory = tmp_path / 'template',
+        preserve = True,
+    )
+    mock_remove = mocker.patch(
+        'copiertv.engine._remove_temporary_directory' )
+    validate_variant(
+        'default', config,
+        _copier_copy = lambda *a, **k: None,
+        _runner = lambda *a, **k: None,
+    )
+    mock_remove.assert_not_called( )
+
+
+# --- ExecuteValidationCommands ---
+
+def test_300_execute_validation_commands_runs_all( tmp_path, mocker ):
+    ''' Executes each command in sequence. '''
+    config = Configuration(
+        commands = (
+            ValidationCommand( args = ( 'cmd1', ) ),
+            ValidationCommand( args = ( 'cmd2', ) ),
+        ),
+    )
+    mock_execute = mocker.patch(
+        'copiertv.engine._execute_command' )
+    execute_validation_commands(
+        config,
+        template_dir = tmp_path,
+        project_dir = tmp_path / 'project',
+        temp_dir = tmp_path / 'temp',
+        variant = 'default',
+    )
+    assert mock_execute.call_count == 2
+
+
+def test_310_execute_validation_commands_no_commands( tmp_path, mocker ):
+    ''' Does nothing when no commands configured. '''
+    config = Configuration( )
+    mock_execute = mocker.patch(
+        'copiertv.engine._execute_command' )
+    execute_validation_commands(
+        config,
+        template_dir = tmp_path,
+        project_dir = tmp_path / 'project',
+        temp_dir = tmp_path / 'temp',
+        variant = 'default',
+    )
+    mock_execute.assert_not_called( )
