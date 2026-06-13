@@ -98,10 +98,12 @@ class ValidationCommandFailure( Omnierror ):
         command: tuple[ str, ... ],
         returncode: int,
         temp_directory: __.Absential[ __.Path ] = __.absent,
+        stderr: __.Absential[ str ] = __.absent,
     ) -> None:
         self.command = command
         self.returncode = returncode
         self._temp_directory = temp_directory
+        self._stderr = stderr
         message = (
             f"Validation command failed with exit code "
             f"{returncode}: {' '.join( command )}"
@@ -111,6 +113,8 @@ class ValidationCommandFailure( Omnierror ):
                 f"{message}\nTemporary directory preserved at: "
                 f"{temp_directory}"
             )
+        if not __.is_absent( stderr ) and stderr:
+            message = f"{message}\n{stderr}"
         super( ).__init__( message )
 
     def render_as_markdown( self ) -> tuple[ str, ... ]:
@@ -119,6 +123,8 @@ class ValidationCommandFailure( Omnierror ):
             f"(exit code {self.returncode}): "
             f"{' '.join( self.command )}",
         ]
+        if not __.is_absent( self._stderr ) and self._stderr:
+            lines.append( self._stderr )
         if not __.is_absent( self._temp_directory ):
             lines.append(
                 f"\U0001f4c1 Temporary directory preserved at: "

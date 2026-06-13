@@ -87,15 +87,21 @@ def _execute_command(
     executor: __.cabc.Callable[ ..., __.typx.Any ] = __.subprocess.run,
 ) -> None:
     ''' Runs a command and wraps errors. '''
-    try: executor( command, cwd = working_directory, check = True )
+    try: executor(
+        command, cwd = working_directory, check = True,
+        stdout = __.subprocess.PIPE, stderr = __.subprocess.PIPE,
+    )
     except FileNotFoundError as exception:
         raise _exceptions.ConfigurationInvalidity(
             str( exception ) ) from exception
     except __.subprocess.CalledProcessError as exception:
         temp_ref: __.Absential[ __.Path ] = (
             temporary_directory if preserve else __.absent )
+        stderr_text: __.Absential[ str ] = (
+            exception.stderr.decode( 'utf-8', errors = 'replace' )
+            if exception.stderr else __.absent )
         raise _exceptions.ValidationCommandFailure(
-            command, exception.returncode, temp_ref
+            command, exception.returncode, temp_ref, stderr_text
         ) from exception
 
 
