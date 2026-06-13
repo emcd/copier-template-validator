@@ -178,19 +178,7 @@ def test_190_parse_toml_configuration_invalid( fs ):
 
 # --- AcquireConfiguration ---
 
-def test_200_acquire_configuration_env_override( fs, mocker ):
-    ''' Uses COPIERTV_CONFIG env var when set. '''
-    config_path = Path( '/env-config.toml' )
-    fs.create_file(
-        config_path,
-        contents = '[answers]\ndirectory = "env/dir"\n',
-    )
-    mocker.patch.dict( os.environ, { 'COPIERTV_CONFIG': str( config_path ) } )
-    config = acquire_configuration( )
-    assert config.answers_directory == Path( 'env/dir' )
-
-
-def test_210_acquire_configuration_project_config( fs, mocker ):
+def test_200_acquire_configuration_project_config( fs ):
     ''' Loads project configuration from .auxiliary directory. '''
     fs.create_dir( '/project/.auxiliary/configuration/copiertv' )
     fs.create_file(
@@ -198,24 +186,20 @@ def test_210_acquire_configuration_project_config( fs, mocker ):
         contents = '[answers]\ndirectory = "project/dir"\n',
     )
     fs.create_dir( '/project/.git' )
-    mocker.patch.dict( os.environ, { }, clear = True )
     os.chdir( '/project' )
-    config = acquire_configuration( )
+    config = acquire_configuration( { } )
     assert config.answers_directory == Path( 'project/dir' )
 
 
-def test_220_acquire_configuration_cli_overrides( fs, mocker ):
+def test_210_acquire_configuration_cli_overrides( ):
     ''' CLI overrides take precedence over file config. '''
-    config_path = Path( '/file-config.toml' )
-    fs.create_file(
-        config_path,
-        contents = (
-            '[answers]\ndirectory = "file/dir"\n'
-            '[options]\npreserve = false\n'
-        ),
-    )
-    mocker.patch.dict( os.environ, { 'COPIERTV_CONFIG': str( config_path ) } )
+    appcore_config = {
+        'answers': { 'directory': 'file/dir' },
+        'options': { 'preserve': False },
+    }
     cli_config = Configuration( preserve = True )
-    config = acquire_configuration( cli_config )
+    config = acquire_configuration( appcore_config, cli_config )
+    assert config.answers_directory == Path( 'file/dir' )
+    assert config.preserve is True
     assert config.answers_directory == Path( 'file/dir' )
     assert config.preserve is True

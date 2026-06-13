@@ -77,17 +77,18 @@ class Configuration( __.immut.DataclassObject ):
 
 
 def acquire_configuration(
+    appcore_configuration: __.cabc.Mapping[ str, __.typx.Any ],
     cli_overrides: __.Absential[ Configuration ] = __.absent,
 ) -> Configuration:
-    ''' Acquires config from hierarchy: CLI > env > project > user. '''
-    env_path = __.os.environ.get( 'COPIERTV_CONFIG' )
-    if env_path:
-        file_config = parse_toml_configuration( __.Path( env_path ) )
-    else:
-        project_config = _acquire_project_configuration( )
-        user_config = _acquire_user_configuration( )
-        file_config = merge_configurations(
-            user_config, project_config )
+    ''' Acquires config from appcore dict and project config.
+
+        Merges project configuration with appcore-provided user
+        configuration. CLI overrides take final precedence.
+    '''
+    user_config = _parse_configuration_data( appcore_configuration )
+    project_config = _acquire_project_configuration(
+        appcore_configuration )
+    file_config = merge_configurations( user_config, project_config )
     if __.is_absent( cli_overrides ): return file_config
     return merge_configurations( file_config, cli_overrides )
 
@@ -162,22 +163,19 @@ def parse_toml_configuration( path: __.Path ) -> Configuration:
     return _parse_configuration_data( data )
 
 
-def _acquire_project_configuration( ) -> Configuration:
+def _acquire_project_configuration(
+    appcore_configuration: __.cabc.Mapping[ str, __.typx.Any ],
+) -> Configuration:
     ''' Acquires per-project configuration. '''
-    project_root = detect_project_root( )
-    config_path = (
-        project_root / '.auxiliary' / 'configuration'
-        / 'copiertv' / 'general.toml' )
-    if not config_path.is_file( ): return Configuration( )
-    return parse_toml_configuration( config_path )
-
-
-def _acquire_user_configuration( ) -> Configuration:
-    ''' Acquires per-user configuration via platformdirs. '''
-    import platformdirs
-    config_dir = __.Path(
-        platformdirs.user_config_dir( 'copiertv' ) )
-    config_path = config_dir / 'general.toml'
+    options_data = appcore_configuration.get( 'options', { } )
+    project_config_raw = options_data.get( 'project-configuration' )
+    if project_config_raw:
+        config_path = __.Path( project_config_raw )
+    else:
+        project_root = detect_project_root( )
+        config_path = (
+            project_root / '.auxiliary' / 'configuration'
+            / 'copiertv' / 'general.toml' )
     if not config_path.is_file( ): return Configuration( )
     return parse_toml_configuration( config_path )
 

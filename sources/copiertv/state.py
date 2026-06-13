@@ -18,39 +18,17 @@
 #============================================================================#
 
 
-''' Common imports used throughout the package. '''
-
-# ruff: noqa: F401
+''' Application state management. '''
 
 
-import asyncio
-import collections.abc as cabc
-import contextlib    as ctxl
-import dataclasses   as dcls
-import functools
-import logging
-import os
-import shutil
-import subprocess
-import sys
-import tempfile
-import                    types
+from . import __
+from . import configuration as _configuration
 
-from pathlib import Path
 
-import appcore
-import appcore.cli as appcore_cli
-import typing_extensions as typx
-# --- BEGIN: Injected by Copier ---
-import dynadoc as         ddoc
-import frigid as          immut
-import                    tyro
-# --- END: Injected by Copier ---
+class Globals( __.Globals ):
+    ''' Copiertv-specific global state container.
 
-# --- BEGIN: Injected by Copier ---
-from absence import Absential, absent, is_absent
-# --- END: Injected by Copier ---
+        Extends appcore.Globals with our parsed Configuration object.
+    '''
 
-import tomli as tomllib
-
-from appcore.state import Globals
+    copiertv_configuration: _configuration.Configuration

@@ -124,28 +124,6 @@ async def test_160_validate_propagates_errors( mocker ):
 
 # --- Execute ---
 
-def test_170_execute_runs( ):
-    ''' Runs main coroutine to completion. '''
-    called = False
-    async def _tracking_main( ):
-        nonlocal called
-        called = True
-    execute( main = _tracking_main )
-    assert called
-
-
-def test_180_execute_system_exit( ):
-    ''' Re-raises SystemExit. '''
-    async def _raising_main( ):
-        raise SystemExit( 1 )
-    with pytest.raises( SystemExit ):
-        execute( main = _raising_main )
-
-
-def test_190_execute_base_exception( ):
-    ''' Converts BaseException to SystemExit(1). '''
-    async def _raising_main( ):
-        raise KeyboardInterrupt( )
-    with pytest.raises( SystemExit ) as exc_info:
-        execute( main = _raising_main )
-    assert exc_info.value.code == 1
+def test_170_execute_callable( ):
+    ''' execute is callable. '''
+    assert callable( execute )

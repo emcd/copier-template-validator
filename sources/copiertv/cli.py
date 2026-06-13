@@ -25,6 +25,7 @@ from . import __
 from . import configuration as _configuration
 from . import engine as _engine
 from . import exceptions as _exceptions
+from . import state as _state
 
 
 def intercept_errors( ) -> __.cabc.Callable[
@@ -76,26 +77,17 @@ async def _validate(
     print( '\n'.join( lines ) )
 
 
-@intercept_errors( )
-async def _main( ) -> None:
-    ''' Entrypoint for CLI execution. '''
-    config = (
-        __.tyro.conf.EnumChoicesFromValues,
-        __.tyro.conf.HelptextFromCommentsOff,
-    )
-    dispatcher = __.tyro.cli( _CommandDispatcher, config = config )
-    await dispatcher( )
-
-
-class _SurveyCommand:
+class _SurveyCommand( __.appcore_cli.Command ):
     ''' Surveys available template configuration variants. '''
 
-    async def __call__( self ) -> None:
-        config = _configuration.acquire_configuration( )
-        await _survey( config )
+    @intercept_errors( )
+    async def execute( self, auxdata: __.Globals ) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
+        if not isinstance( auxdata, _state.Globals ):
+            raise _exceptions.ConfigurationInvalidity( )
+        await _survey( auxdata.copiertv_configuration )
 
 
-class _ValidateCommand:
+class _ValidateCommand( __.appcore_cli.Command ):
     ''' Validates template against configuration variant. '''
 
     variant: __.typx.Annotated[
@@ -110,15 +102,19 @@ class _ValidateCommand:
             prefix_name = False ),
     ] = False
 
-    async def __call__( self ) -> None:
+    @intercept_errors( )
+    async def execute( self, auxdata: __.Globals ) -> None:  # pyright: ignore[reportIncompatibleMethodOverride]
+        if not isinstance( auxdata, _state.Globals ):
+            raise _exceptions.ConfigurationInvalidity( )
         cli_config = _configuration.Configuration(
             preserve = self.preserve )
-        config = _configuration.acquire_configuration( cli_config )
+        config = _configuration.merge_configurations(
+            auxdata.copiertv_configuration, cli_config )
         await _validate( self.variant, config )
 
 
-class _CommandDispatcher:
-    ''' Dispatches template validation commands. '''
+class _Application( __.appcore_cli.Application ):
+    ''' Copiertv CLI application. '''
 
     command: __.typx.Union[
         __.typx.Annotated[
@@ -133,17 +129,31 @@ class _CommandDispatcher:
         ],
     ] = __.dcls.field( default_factory = _SurveyCommand )
 
-    async def __call__( self ) -> None:
-        await self.command( )
+    async def execute( self, auxdata: __.Globals ) -> None:
+        ''' Dispatches to the selected command. '''
+        await self.command( auxdata )
+
+    async def prepare(
+        self, exits: __.ctxl.AsyncExitStack
+    ) -> _state.Globals:
+        ''' Prepares copiertv-specific global state. '''
+        auxdata_base = await super( ).prepare( exits )
+        config = _configuration.acquire_configuration(
+            auxdata_base.configuration )
+        return _state.Globals(
+            copiertv_configuration = config,
+            **{
+                field.name: getattr( auxdata_base, field.name )
+                for field in __.dcls.fields( auxdata_base )
+                if not field.name.startswith( '_' ) } )
 
 
-def execute(
-    main: __.cabc.Callable[
-        ..., __.cabc.Coroutine[ __.typx.Any, __.typx.Any, None ]
-    ] = _main,
-) -> None:
+def execute( ) -> None:
     ''' Entrypoint for CLI execution. '''
-    from asyncio import run
-    try: run( main( ) )
+    config = (
+        __.tyro.conf.EnumChoicesFromValues,
+        __.tyro.conf.HelptextFromCommentsOff,
+    )
+    try: __.asyncio.run( __.tyro.cli( _Application, config = config )( ) )
     except SystemExit: raise
     except BaseException: raise SystemExit( 1 ) from None
