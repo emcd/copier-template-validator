@@ -15,9 +15,9 @@ license = 'Apache-2.0'
 readme = { 'file' = 'README.rst', 'content-type' = 'text/x-rst' }
 requires-python = '>= 3.10'
 dependencies = [
-  'copier>=9.0',
-  'pyyaml>=6.0',
-  'tomli>=1.1',
+  'copier~=9.0',
+  'pyyaml~=6.0',
+  'tomli~=2.2',
   'typing-extensions',
   # --- BEGIN: Injected by Copier ---
   'absence~=1.1',
