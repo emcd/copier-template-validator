@@ -201,5 +201,16 @@ def test_210_acquire_configuration_cli_overrides( ):
     config = acquire_configuration( appcore_config, cli_config )
     assert config.answers_directory == Path( 'file/dir' )
     assert config.preserve is True
-    assert config.answers_directory == Path( 'file/dir' )
-    assert config.preserve is True
+
+
+def test_220_acquire_configuration_project_config_override( fs ):
+    ''' Uses project-configuration path from appcore config. '''
+    fs.create_file(
+        '/custom/config.toml',
+        contents = '[answers]\ndirectory = "custom/dir"\n',
+    )
+    appcore_config = {
+        'options': { 'project-configuration': '/custom/config.toml' },
+    }
+    config = acquire_configuration( appcore_config )
+    assert config.answers_directory == Path( 'custom/dir' )
