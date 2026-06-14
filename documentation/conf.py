@@ -147,10 +147,16 @@ intersphinx_mapping = {
   # --- BEGIN: Injected by Copier ---
     'absence': (
         'https://emcd.github.io/python-absence/stable/sphinx-html', None),
+    'accretive': (
+        'https://emcd.github.io/python-accretive/stable/sphinx-html', None),
+    'appcore': (
+        'https://emcd.github.io/python-appcore/stable/sphinx-html', None),
     'dynadoc': (
         'https://emcd.github.io/python-dynadoc/stable/sphinx-html', None),
     'frigid': (
         'https://emcd.github.io/python-frigid/stable/sphinx-html', None),
+    'platformdirs': (
+        'https://platformdirs.readthedocs.io/en/latest', None),
   # --- END: Injected by Copier ---
 }
 
