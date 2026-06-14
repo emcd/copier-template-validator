@@ -193,7 +193,7 @@ def test_230_copy_template_copier_error( fs ):
 
 # --- ValidateVariant ---
 
-def test_240_validate_success( fs, tmp_path ):
+def test_240_returns_result( fs, tmp_path ):
     ''' Returns ValidationResult on success. '''
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
@@ -215,14 +215,14 @@ def test_240_validate_success( fs, tmp_path ):
     assert result.items_attempted == 1
 
 
-def test_250_validate_missing_answers_dir( ):
+def test_250_missing_answers_dir( ):
     ''' Raises ConfigurationInvalidity when answers dir absent. '''
     config = Configuration( )
     with pytest.raises( exceptions.ConfigurationInvalidity ):
         validate_variant( 'default', config )
 
 
-def test_260_validate_missing_answers_file( fs, tmp_path ):
+def test_260_missing_answers_file( fs, tmp_path ):
     ''' Raises ConfigurationAbsence for missing variant file. '''
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
@@ -238,7 +238,7 @@ def test_260_validate_missing_answers_file( fs, tmp_path ):
         )
 
 
-def test_270_validate_cmd_failure_propagates( fs, tmp_path ):
+def test_270_cmd_failure_propagates( fs, tmp_path ):
     ''' Propagates ValidationCommandFailure from commands. '''
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
@@ -259,7 +259,7 @@ def test_270_validate_cmd_failure_propagates( fs, tmp_path ):
         )
 
 
-def test_275_validate_cmd_failure_cleanup( fs, tmp_path ):
+def test_275_cmd_failure_cleanup( fs, tmp_path ):
     ''' Cleans up temp directory on command failure when preserve=False. '''
     import tempfile
     answers_dir = tmp_path / 'data'
@@ -285,7 +285,7 @@ def test_275_validate_cmd_failure_cleanup( fs, tmp_path ):
     assert temp_dirs_before == temp_dirs_after
 
 
-def test_280_validate_cleanup_success( fs, tmp_path ):
+def test_280_cleanup_on_success( fs, tmp_path ):
     ''' Removes temp directory when preserve is False. '''
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
@@ -303,7 +303,7 @@ def test_280_validate_cleanup_success( fs, tmp_path ):
     assert not result.temporary_directory.exists( )
 
 
-def test_290_validate_preserves_on_config( fs, tmp_path ):
+def test_290_preserves_on_config( fs, tmp_path ):
     ''' Keeps temp directory when preserve is True. '''
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
@@ -322,7 +322,7 @@ def test_290_validate_preserves_on_config( fs, tmp_path ):
     assert result.temporary_directory.exists( )
 
 
-def test_295_validate_cleanup_exception( fs, tmp_path ):
+def test_295_cleanup_on_exception( fs, tmp_path ):
     ''' Removes temp directory when copier raises unexpected error. '''
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
@@ -345,7 +345,7 @@ def test_295_validate_cleanup_exception( fs, tmp_path ):
     assert temp_dirs_before == temp_dirs_after
 
 
-def test_296_validate_missing_template_dir( fs, tmp_path ):
+def test_296_missing_template_dir( fs, tmp_path ):
     ''' Raises ConfigurationInvalidity when template directory absent. '''
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
@@ -391,7 +391,7 @@ def test_297_preserve_skips_cleanup( fs, tmp_path ):
 
 # --- ExecuteValidationCommands ---
 
-def test_300_execute_validation_commands_runs_all( tmp_path ):
+def test_300_exec_commands_runs_all( tmp_path ):
     ''' Executes each command in sequence. '''
     config = Configuration(
         commands = (
@@ -408,7 +408,7 @@ def test_300_execute_validation_commands_runs_all( tmp_path ):
     )
 
 
-def test_310_execute_validation_commands_no_commands( tmp_path ):
+def test_310_exec_commands_no_commands( tmp_path ):
     ''' Does nothing when no commands configured. '''
     config = Configuration( )
     execute_validation_commands(
