@@ -193,7 +193,7 @@ def test_230_copy_template_copier_error( fs ):
 
 # --- ValidateVariant ---
 
-def test_240_returns_result( fs, tmp_path ):
+def test_240_returns_result( tmp_path ):
     ''' Returns ValidationResult on success. '''
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
@@ -222,7 +222,7 @@ def test_250_missing_answers_dir( ):
         validate_variant( 'default', config )
 
 
-def test_260_missing_answers_file( fs, tmp_path ):
+def test_260_missing_answers_file( tmp_path ):
     ''' Raises ConfigurationAbsence for missing variant file. '''
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
@@ -238,7 +238,7 @@ def test_260_missing_answers_file( fs, tmp_path ):
         )
 
 
-def test_270_cmd_failure_propagates( fs, tmp_path ):
+def test_270_cmd_failure_propagates( tmp_path ):
     ''' Propagates ValidationCommandFailure from commands. '''
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
@@ -259,7 +259,7 @@ def test_270_cmd_failure_propagates( fs, tmp_path ):
         )
 
 
-def test_275_cmd_failure_cleanup( fs, tmp_path ):
+def test_275_cmd_failure_cleanup( tmp_path ):
     ''' Cleans up temp directory on command failure when preserve=False. '''
     import tempfile
     answers_dir = tmp_path / 'data'
@@ -285,7 +285,7 @@ def test_275_cmd_failure_cleanup( fs, tmp_path ):
     assert temp_dirs_before == temp_dirs_after
 
 
-def test_280_cleanup_on_success( fs, tmp_path ):
+def test_280_cleanup_on_success( tmp_path ):
     ''' Removes temp directory when preserve is False. '''
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
@@ -303,7 +303,7 @@ def test_280_cleanup_on_success( fs, tmp_path ):
     assert not result.temporary_directory.exists( )
 
 
-def test_290_preserves_on_config( fs, tmp_path ):
+def test_290_preserves_on_config( tmp_path ):
     ''' Keeps temp directory when preserve is True. '''
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
@@ -322,7 +322,7 @@ def test_290_preserves_on_config( fs, tmp_path ):
     assert result.temporary_directory.exists( )
 
 
-def test_295_cleanup_on_exception( fs, tmp_path ):
+def test_295_cleanup_on_exception( tmp_path ):
     ''' Removes temp directory when copier raises unexpected error. '''
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
@@ -345,7 +345,7 @@ def test_295_cleanup_on_exception( fs, tmp_path ):
     assert temp_dirs_before == temp_dirs_after
 
 
-def test_296_missing_template_dir( fs, tmp_path ):
+def test_296_missing_template_dir( tmp_path ):
     ''' Raises ConfigurationInvalidity when template directory absent. '''
     answers_dir = tmp_path / 'data'
     answers_dir.mkdir( )
@@ -363,7 +363,7 @@ def test_296_missing_template_dir( fs, tmp_path ):
         )
 
 
-def test_297_preserve_skips_cleanup( fs, tmp_path ):
+def test_297_preserve_skips_cleanup( tmp_path ):
     ''' Skips cleanup when preserve=True and exception occurs. '''
     import tempfile
     answers_dir = tmp_path / 'data'
