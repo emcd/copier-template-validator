@@ -41,8 +41,9 @@ def test_100_configuration_absence_without_location( ):
 
 def test_110_configuration_absence_with_location( ):
     ''' Includes location in message. '''
-    exc = ConfigurationAbsence( Path( '/some/path' ) )
-    assert '/some/path' in str( exc )
+    location = Path( '/some/path' )
+    exc = ConfigurationAbsence( location )
+    assert str( location ) in str( exc )
 
 
 def test_120_configuration_absence_render( ):
@@ -84,15 +85,17 @@ def test_150_configuration_invalidity_with_exception( ):
 
 def test_170_data_invalidity_message( ):
     ''' Includes path and cause in message. '''
-    exc = DataInvalidity( Path( '/data.yaml' ), 'Invalid YAML' )
-    assert '/data.yaml' in str( exc )
+    path = Path( '/data.yaml' )
+    exc = DataInvalidity( path, 'Invalid YAML' )
+    assert str( path ) in str( exc )
     assert 'Invalid YAML' in str( exc )
 
 
 def test_180_file_operation_failure_message( ):
     ''' Includes path and operation in message. '''
-    exc = FileOperationFailure( Path( '/file' ), 'read' )
-    assert '/file' in str( exc )
+    path = Path( '/file' )
+    exc = FileOperationFailure( path, 'read' )
+    assert str( path ) in str( exc )
     assert 'read' in str( exc )
 
 
