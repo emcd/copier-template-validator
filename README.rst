@@ -117,20 +117,21 @@ Usage
 Survey Variants
 -------------------------------------------------------------------------------
 
-List available template variants from an answers directory::
+List available template variants (reads answers directory from
+configuration)::
 
-    copiertv survey --answers-directory data/copier
+    copiertv survey
 
 Validate a Variant
 -------------------------------------------------------------------------------
 
 Validate a template variant::
 
-    copiertv validate --answers-directory data/copier default
+    copiertv validate default
 
 Preserve the generated project for inspection::
 
-    copiertv validate --answers-directory data/copier --preserve default
+    copiertv validate --preserve default
 
 Configuration File
 -------------------------------------------------------------------------------

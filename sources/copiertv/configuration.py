@@ -59,9 +59,9 @@ class Configuration( __.immut.DataclassObject ):
         __.typx.Doc( ''' Template source directory. ''' ),
     ] = __.absent
     preserve: __.typx.Annotated[
-        bool,
+        __.Absential[ bool ],
         __.typx.Doc( ''' Preserve temporary directories. ''' ),
-    ] = False
+    ] = __.absent
     variant_filter: __.typx.Annotated[
         __.Absential[ tuple[ str, ... ] ],
         __.typx.Doc( ''' Only validate these variants. ''' ),
@@ -71,9 +71,9 @@ class Configuration( __.immut.DataclassObject ):
         __.typx.Doc( ''' Git ref for copier copy. ''' ),
     ] = __.absent
     unsafe: __.typx.Annotated[
-        bool,
+        __.Absential[ bool ],
         __.typx.Doc( ''' Allow unsafe Copier features. ''' ),
-    ] = False
+    ] = __.absent
 
 
 def acquire_configuration(
@@ -138,12 +138,7 @@ def merge_configurations(
         if field.name.startswith( '_' ): continue
         override_value = getattr( override, field.name )
         base_value = getattr( base, field.name )
-        if field.name in ( 'preserve', 'unsafe' ):
-            kwargs[ field.name ] = override_value or base_value
-        elif (
-            isinstance( override_value, bool )
-            or not __.is_absent( override_value )
-        ):
+        if not __.is_absent( override_value ):
             kwargs[ field.name ] = override_value
         else:
             kwargs[ field.name ] = base_value
@@ -160,7 +155,7 @@ def parse_toml_configuration( path: __.Path ) -> Configuration:
     except ValueError as exception:
         raise _exceptions.DataInvalidity(
             path, 'Invalid TOML' ) from exception
-    return _parse_configuration_data( data )
+    return _parse_configuration_data( data, source = path )
 
 
 def _acquire_project_configuration(
@@ -190,7 +185,8 @@ def _interpolate_string(
 
 
 def _parse_configuration_data(
-    data: __.cabc.Mapping[ str, __.typx.Any ]
+    data: __.cabc.Mapping[ str, __.typx.Any ],
+    source: __.Absential[ __.Path ] = __.absent,
 ) -> Configuration:
     ''' Parses configuration mapping into dataclass. '''
     answers_data = data.get( 'answers', { } )
@@ -199,13 +195,21 @@ def _parse_configuration_data(
         __.Path( answers_dir_raw )
         if answers_dir_raw else __.absent )
     commands_data = data.get( 'commands', ( ) )
-    commands = tuple(
-        ValidationCommand(
-            args = tuple( cmd[ 'args' ] ),
+    commands: list[ ValidationCommand ] = [ ]
+    for cmd in commands_data:
+        try: args = tuple( cmd[ 'args' ] )
+        except KeyError as exception:
+            message = "missing 'args' in command"
+            if not __.is_absent( source ):
+                message = f"{message}: {source}"
+            raise _exceptions.DataInvalidity(
+                source if not __.is_absent( source )
+                else __.Path( '<configuration>' ),
+                message ) from exception
+        commands.append( ValidationCommand(
+            args = args,
             cwd = cmd.get( 'cwd', __.absent ),
-        )
-        for cmd in commands_data
-    )
+        ) )
     options_data = data.get( 'options', { } )
     template_dir_raw = options_data.get( 'template-directory' )
     template_directory = (
@@ -215,12 +219,14 @@ def _parse_configuration_data(
     variant_filter = (
         tuple( variants_raw ) if variants_raw else __.absent )
     vcs_ref = options_data.get( 'vcs-ref', __.absent )
+    preserve_raw = options_data.get( 'preserve' )
+    unsafe_raw = options_data.get( 'unsafe' )
     return Configuration(
         answers_directory = answers_directory,
-        commands = commands,
+        commands = tuple( commands ),
         template_directory = template_directory,
-        preserve = options_data.get( 'preserve', False ),
+        preserve = preserve_raw if preserve_raw is not None else __.absent,
         variant_filter = variant_filter,
         vcs_ref = vcs_ref if vcs_ref else __.absent,
-        unsafe = options_data.get( 'unsafe', False ),
+        unsafe = unsafe_raw if unsafe_raw is not None else __.absent,
     )

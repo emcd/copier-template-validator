@@ -259,6 +259,32 @@ def test_270_validate_variant_command_failure_propagates( fs, tmp_path ):
         )
 
 
+def test_275_validate_variant_command_failure_cleanup( fs, tmp_path ):
+    ''' Cleans up temp directory on command failure when preserve=False. '''
+    import tempfile
+    answers_dir = tmp_path / 'data'
+    answers_dir.mkdir( )
+    answers_file = answers_dir / 'answers-default.yaml'
+    answers_file.write_text( 'name: test\n' )
+    config = Configuration(
+        answers_directory = answers_dir,
+        template_directory = tmp_path / 'template',
+        commands = ( ValidationCommand( args = ( 'false', ) ), ),
+    )
+    system_temp = Path( tempfile.gettempdir( ) )
+    temp_dirs_before = set( system_temp.glob( 'copiertv-*' ) )
+    def failing_executor( args, **kwargs ):
+        raise CalledProcessError( 1, args )
+    with pytest.raises( exceptions.ValidationCommandFailure ):
+        validate_variant(
+            'default', config,
+            copier = lambda *a, **k: None,
+            executor = failing_executor,
+        )
+    temp_dirs_after = set( system_temp.glob( 'copiertv-*' ) )
+    assert temp_dirs_before == temp_dirs_after
+
+
 def test_280_validate_variant_cleanup_on_success( fs, tmp_path ):
     ''' Removes temp directory when preserve is False. '''
     answers_dir = tmp_path / 'data'

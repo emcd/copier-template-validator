@@ -57,10 +57,10 @@ def test_120_configuration_defaults( ):
     assert config.answers_directory is absent
     assert config.commands == ( )
     assert config.template_directory is absent
-    assert config.preserve is False
+    assert config.preserve is absent
     assert config.variant_filter is absent
     assert config.vcs_ref is absent
-    assert config.unsafe is False
+    assert config.unsafe is absent
 
 
 def test_130_merge_configurations_override_answers( ):
@@ -85,6 +85,15 @@ def test_150_merge_configurations_override_preserve( ):
     override = Configuration( preserve = True )
     result = merge_configurations( base, override )
     assert result.preserve is True
+
+
+def test_155_merge_configurations_false_overrides_true( ):
+    ''' Explicit false can override true. '''
+    base = Configuration( preserve = True, unsafe = True )
+    override = Configuration( preserve = False, unsafe = False )
+    result = merge_configurations( base, override )
+    assert result.preserve is False
+    assert result.unsafe is False
 
 
 def test_160_interpolate_command_basic( fs ):
