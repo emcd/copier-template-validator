@@ -106,7 +106,7 @@ def test_160_interpolate_command_basic( fs ):
     args, cwd = interpolate_command(
         cmd, template_directory, project_directory,
         temporary_directory, 'default' )
-    assert args == ( 'check', '--source', '/project' )
+    assert args == ( 'check', '--source', str( project_directory ) )
     assert cwd == template_directory
 
 
