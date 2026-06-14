@@ -21,5 +21,9 @@
 Release Notes
 *******************************************************************************
 
-
 .. towncrier release notes start
+
+copiertv 1.0a0 (2026-06-13)
+===========================
+
+No significant changes.
