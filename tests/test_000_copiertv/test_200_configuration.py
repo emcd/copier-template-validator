@@ -145,8 +145,11 @@ def test_190_detect_project_root_git_found( fs ):
     import os
     os.chdir( '/project/src' )
     root = detect_project_root( )
-    # Compare path parts for Windows compatibility.
-    assert root.parts == Path( '/project' ).parts
+    # Compare path without drive letter for Windows compatibility.
+    expected = Path( '/project' )
+    assert (
+        root.relative_to( root.anchor )
+        == expected.relative_to( expected.anchor ) )
 
 
 def test_200_detect_project_root_no_vcs( fs ):
@@ -155,5 +158,8 @@ def test_200_detect_project_root_no_vcs( fs ):
     import os
     os.chdir( '/plain/dir' )
     root = detect_project_root( )
-    # Compare path parts for Windows compatibility.
-    assert root.parts == Path( '/plain/dir' ).parts
+    # Compare path without drive letter for Windows compatibility.
+    expected = Path( '/plain/dir' )
+    assert (
+        root.relative_to( root.anchor )
+        == expected.relative_to( expected.anchor ) )
