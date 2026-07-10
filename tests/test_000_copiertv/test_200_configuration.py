@@ -393,3 +393,129 @@ def test_360_missing_commands_preserves_inheritance( tmp_path ):
     result = merge_configurations( base, override )
     assert result.commands is not absent
     assert len( result.commands ) == 1
+
+
+# --- Todo 10 audit: every field type's merge-clobber behavior ---
+
+
+def test_370_variant_filter_explicit_empty_clears( ):
+    ''' Empty variant-filter list clears inherited variants in merge. '''
+    from copiertv.configuration import (
+        _parse_configuration_data, merge_configurations,
+    )
+    base = _parse_configuration_data(
+        { 'options': { 'variants': [ 'default', 'minimal' ] } } )
+    override = _parse_configuration_data(
+        { 'options': { 'variants': [] } } )
+    result = merge_configurations( base, override )
+    assert result.variant_filter is not absent
+    assert result.variant_filter == ( )
+
+
+def test_380_missing_variant_filter_preserves_inheritance( ):
+    ''' Missing variant-filter key preserves inherited variants in merge. '''
+    from copiertv.configuration import (
+        _parse_configuration_data, merge_configurations,
+    )
+    base = _parse_configuration_data(
+        { 'options': { 'variants': [ 'default' ] } } )
+    override = _parse_configuration_data( { 'options': {} } )
+    result = merge_configurations( base, override )
+    assert result.variant_filter is not absent
+    assert result.variant_filter == ( 'default', )
+
+
+def test_390_answers_directory_present_inherits( ):
+    ''' Answers-directory set in base survives absent override. '''
+    from copiertv.configuration import (
+        _parse_configuration_data, merge_configurations,
+    )
+    base = _parse_configuration_data(
+        { 'answers': { 'directory': '/project/answers' } } )
+    override = _parse_configuration_data( { } )
+    result = merge_configurations( base, override )
+    assert result.answers_directory == Path( '/project/answers' )
+
+
+def test_400_template_directory_present_inherits( ):
+    ''' Template-directory set in base survives absent override. '''
+    from copiertv.configuration import (
+        _parse_configuration_data, merge_configurations,
+    )
+    base = _parse_configuration_data(
+        { 'options': { 'template-directory': '/tpl' } } )
+    override = _parse_configuration_data( { } )
+    result = merge_configurations( base, override )
+    assert result.template_directory == Path( '/tpl' )
+
+
+def test_410_vcs_ref_present_inherits( ):
+    ''' Vcs-ref set in base survives absent override. '''
+    from copiertv.configuration import (
+        _parse_configuration_data, merge_configurations,
+    )
+    base = _parse_configuration_data(
+        { 'options': { 'vcs-ref': 'main' } } )
+    override = _parse_configuration_data( { } )
+    result = merge_configurations( base, override )
+    assert result.vcs_ref == 'main'
+
+
+def test_420_vcs_ref_present_overridden_by_override( ):
+    ''' Vcs-ref in override replaces base value. '''
+    from copiertv.configuration import (
+        _parse_configuration_data, merge_configurations,
+    )
+    base = _parse_configuration_data(
+        { 'options': { 'vcs-ref': 'main' } } )
+    override = _parse_configuration_data(
+        { 'options': { 'vcs-ref': 'develop' } } )
+    result = merge_configurations( base, override )
+    assert result.vcs_ref == 'develop'
+
+
+def test_430_unsafe_inherits_when_missing( ):
+    ''' Unsafe flag set in base survives absent override. '''
+    from copiertv.configuration import (
+        _parse_configuration_data, merge_configurations,
+    )
+    base = _parse_configuration_data(
+        { 'options': { 'unsafe': True } } )
+    override = _parse_configuration_data( { } )
+    result = merge_configurations( base, override )
+    assert result.unsafe is True
+
+
+def test_440_missing_keys_become_absent( ):
+    ''' Every field of an empty TOML parsing result must be absent.
+
+        Documents and locks in that missing fields become ``absent``
+        through the parser, never ``None`` or another raw sentinel
+        that merge would misclassify as an explicit override.
+    '''
+    from copiertv.configuration import _parse_configuration_data
+    config = _parse_configuration_data( { } )
+    for field in (
+        'answers_directory', 'commands', 'template_directory',
+        'preserve', 'variant_filter', 'vcs_ref', 'unsafe',
+    ):
+        value = getattr( config, field )
+        assert value is absent, (
+            f"field {field!r} produced {value!r} for empty input "
+            f"(should be absent)" )
+
+
+def test_450_explicit_empty_collection_signals_clear( ):
+    ''' Explicit empty ``commands = []`` / ``variants = []`` survives
+        the parser as an empty tuple (not converted to ``absent``),
+        which is the wire signal for "clear inheritance" through merge.
+    '''
+    from copiertv.configuration import _parse_configuration_data
+    commands_config = _parse_configuration_data(
+        { 'commands': [ ] } )
+    assert commands_config.commands is not absent
+    assert commands_config.commands == ( )
+    variants_config = _parse_configuration_data(
+        { 'options': { 'variants': [ ] } } )
+    assert variants_config.variant_filter is not absent
+    assert variants_config.variant_filter == ( )

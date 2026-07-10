@@ -1,0 +1,1 @@
+Audited all ``Configuration`` fields for the merge-clobber pattern that originally affected ``commands``. Every field now goes through a parser helper that returns ``absent`` for missing values; regression tests lock in the contract that explicit empty collections (``commands = []``, ``variants = []``) remain as empty tuples so they can signal "clear inheritance" through merge.
