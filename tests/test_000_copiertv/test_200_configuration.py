@@ -22,6 +22,7 @@
 
 
 from pathlib import Path
+from typing import Any
 
 from absence import absent
 
@@ -163,3 +164,232 @@ def test_200_detect_project_root_no_vcs( fs ):
     assert (
         root.relative_to( root.anchor )
         == expected.relative_to( expected.anchor ) )
+
+
+# --- Field-level validation errors ---
+
+
+_BAD_CONFIGS: dict[ str, dict[ str, Any ] ] = {
+    'options.preserve': { 'options': { 'preserve': 'yes' } },
+    'options.unsafe': { 'options': { 'unsafe': 1 } },
+    'options.variants_type': { 'options': { 'variants': 'alpha' } },
+    'options.variants_element':
+        { 'options': { 'variants': [ 'alpha', 42 ] } },
+    'options.template_directory':
+        { 'options': { 'template-directory': 42 } },
+    'answers': { 'answers': [ 'bad' ] },
+    'commands': { 'commands': 'bad' },
+    'commands_entry': { 'commands': [ 'bad' ] },
+    'commands_args': { 'commands': [ { 'args': 'hatch' } ] },
+    'commands_arg_element':
+        { 'commands': [ { 'args': [ 'hatch', 42 ] } ] },
+}
+
+
+def _bad( key: str ) -> None:
+    ''' Triggers parse on a known-bad configuration. '''
+    from copiertv.configuration import _parse_configuration_data
+    _parse_configuration_data( _BAD_CONFIGS[ key ] )
+
+
+def test_210_invalid_preserve_type( ):
+    ''' Raises with field info when preserve is not bool. '''
+    import pytest
+    from copiertv import exceptions
+    with pytest.raises( exceptions.ConfigurationInvalidity ) as info:
+        _bad( 'options.preserve' )
+    message = str( info.value )
+    assert 'options.preserve' in message
+    assert 'bool' in message
+    assert "'yes'" in message
+
+
+def test_220_invalid_unsafe_type( ):
+    ''' Raises with field info when unsafe is not bool. '''
+    import pytest
+    from copiertv import exceptions
+    with pytest.raises( exceptions.ConfigurationInvalidity ) as info:
+        _bad( 'options.unsafe' )
+    message = str( info.value )
+    assert 'options.unsafe' in message
+    assert 'bool' in message
+
+
+def test_230_invalid_variants_type( ):
+    ''' Raises when variants is not a sequence. '''
+    import pytest
+    from copiertv import exceptions
+    with pytest.raises( exceptions.ConfigurationInvalidity ) as info:
+        _bad( 'options.variants_type' )
+    assert 'options.variants' in str( info.value )
+
+
+def test_240_invalid_variants_element_type( ):
+    ''' Raises when variant element is not a string. '''
+    import pytest
+    from copiertv import exceptions
+    with pytest.raises( exceptions.ConfigurationInvalidity ) as info:
+        _bad( 'options.variants_element' )
+    message = str( info.value )
+    assert 'options.variants[1]' in message
+    assert 'str' in message
+
+
+def test_250_invalid_template_directory_type( ):
+    ''' Raises when template-directory is not a string. '''
+    import pytest
+    from copiertv import exceptions
+    with pytest.raises( exceptions.ConfigurationInvalidity ) as info:
+        _bad( 'options.template_directory' )
+    message = str( info.value )
+    assert 'options.template-directory' in message
+    assert 'str' in message
+
+
+def test_260_invalid_answers_type( ):
+    ''' Raises when answers is not a mapping. '''
+    import pytest
+    from copiertv import exceptions
+    with pytest.raises( exceptions.ConfigurationInvalidity ) as info:
+        _bad( 'answers' )
+    assert 'answers' in str( info.value )
+
+
+def test_270_invalid_commands_type( ):
+    ''' Raises when commands is not a sequence. '''
+    import pytest
+    from copiertv import exceptions
+    with pytest.raises( exceptions.ConfigurationInvalidity ) as info:
+        _bad( 'commands' )
+    assert 'commands' in str( info.value )
+
+
+def test_280_invalid_command_entry_type( ):
+    ''' Raises when command entry is not a mapping. '''
+    import pytest
+    from copiertv import exceptions
+    with pytest.raises( exceptions.ConfigurationInvalidity ) as info:
+        _bad( 'commands_entry' )
+    assert 'commands[0]' in str( info.value )
+
+
+def test_290_invalid_command_args_type( ):
+    ''' Raises when command args is not a sequence. '''
+    import pytest
+    from copiertv import exceptions
+    with pytest.raises( exceptions.ConfigurationInvalidity ) as info:
+        _bad( 'commands_args' )
+    message = str( info.value )
+    assert 'commands[0].args' in message
+
+
+def test_300_invalid_command_arg_element_type( ):
+    ''' Raises when command arg element is not a string. '''
+    import pytest
+    from copiertv import exceptions
+    with pytest.raises( exceptions.ConfigurationInvalidity ) as info:
+        _bad( 'commands_arg_element' )
+    message = str( info.value )
+    assert 'commands[0].args[1]' in message
+    assert 'str' in message
+
+
+def test_310_valid_full_configuration( tmp_path ):
+    ''' Parses a complete valid configuration. '''
+    from copiertv.configuration import _parse_configuration_data
+    data = {
+        'answers': { 'directory': str( tmp_path / 'answers' ) },
+        'commands': [ { 'args': [ 'hatch', 'test' ] } ],
+        'options': {
+            'template-directory': str( tmp_path / 'template' ),
+            'preserve': True,
+            'unsafe': False,
+            'variants': [ 'default', 'minimal' ],
+            'vcs-ref': 'main',
+        },
+    }
+    config = _parse_configuration_data( data )
+    assert config.answers_directory == tmp_path / 'answers'
+    assert config.commands is not absent
+    assert len( config.commands ) == 1
+    assert config.template_directory == tmp_path / 'template'
+    assert config.preserve is True
+    assert config.unsafe is False
+    assert config.variant_filter == ( 'default', 'minimal' )
+    assert config.vcs_ref == 'main'
+
+
+# --- Regression tests for review findings ---
+
+
+def test_320_missing_boolean_overrides_correctly( tmp_path ):
+    ''' Missing boolean in user config preserves project value.
+
+        Regression for Finding 1: _expect_bool return value previously
+        was discarded, leaving a raw ``None`` that merge treated as an
+        explicit override.
+    '''
+    from copiertv.configuration import (
+        _parse_configuration_data, merge_configurations,
+    )
+    base = _parse_configuration_data(
+        { 'options': { 'preserve': True, 'unsafe': True } } )
+    override = _parse_configuration_data( { } )
+    result = merge_configurations( base, override )
+    assert result.preserve is True
+    assert result.unsafe is True
+
+
+def test_330_vcs_ref_falsy_non_string_rejected( ):
+    ''' Vcs-ref values such as false or 0 are not silently accepted.
+
+        Regression for Finding 2: presence was previously tested via
+        truthiness, so ``false``/``0`` slipped through as ``absent``.
+    '''
+    import pytest
+    from copiertv import exceptions
+    from copiertv.configuration import _parse_configuration_data
+    for bad in ( False, 0, [ ] ):
+        with pytest.raises( exceptions.ConfigurationInvalidity ) as info:
+            _parse_configuration_data(
+                { 'options': { 'vcs-ref': bad } } )
+        assert 'options.vcs-ref' in str( info.value )
+
+
+def test_340_vcs_ref_empty_string_treated_as_absent( ):
+    ''' Empty-string vcs-ref is treated as absent (not invalid). '''
+    from copiertv.configuration import _parse_configuration_data
+    config = _parse_configuration_data(
+        { 'options': { 'vcs-ref': '' } } )
+    assert config.vcs_ref is absent
+
+
+def test_350_empty_commands_clears_inheritance( tmp_path ):
+    ''' Explicit ``commands = []`` clears inherited commands in merge.
+
+        Regression for Finding 3: previously empty and absent were
+        indistinguishable, so users could not intentionally clear
+        inherited commands.
+    '''
+    from copiertv.configuration import (
+        _parse_configuration_data, merge_configurations,
+    )
+    base = _parse_configuration_data(
+        { 'commands': [ { 'args': [ 'hatch', 'test' ] } ] } )
+    override = _parse_configuration_data( { 'commands': [ ] } )
+    result = merge_configurations( base, override )
+    assert result.commands is not absent
+    assert len( result.commands ) == 0
+
+
+def test_360_missing_commands_preserves_inheritance( tmp_path ):
+    ''' Missing ``commands`` key preserves inherited commands in merge. '''
+    from copiertv.configuration import (
+        _parse_configuration_data, merge_configurations,
+    )
+    base = _parse_configuration_data(
+        { 'commands': [ { 'args': [ 'hatch', 'test' ] } ] } )
+    override = _parse_configuration_data( { } )
+    result = merge_configurations( base, override )
+    assert result.commands is not absent
+    assert len( result.commands ) == 1

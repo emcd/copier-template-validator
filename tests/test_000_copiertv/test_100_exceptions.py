@@ -76,6 +76,33 @@ def test_140_configuration_invalidity_with_reason( ):
     assert 'bad value' in str( exc )
 
 
+def test_145_configuration_invalidity_with_field( ):
+    ''' Includes field in message. '''
+    exc = ConfigurationInvalidity(
+        field = 'options.template-directory' )
+    assert 'options.template-directory' in str( exc )
+
+
+def test_150_configuration_invalidity_with_field_expected_value( ):
+    ''' Includes field, expected, and offending value. '''
+    exc = ConfigurationInvalidity(
+        field = 'options.preserve',
+        expected = 'bool',
+        value = 42 )
+    message = str( exc )
+    assert 'options.preserve' in message
+    assert 'bool' in message
+    assert '42' in message
+
+
+def test_155_configuration_invalidity_field_takes_precedence( ):
+    ''' Field info takes precedence over reason. '''
+    exc = ConfigurationInvalidity(
+        'ignored reason', field = 'options.x', expected = 'str' )
+    assert 'options.x' in str( exc )
+    assert 'ignored reason' not in str( exc )
+
+
 def test_150_configuration_invalidity_with_exception( ):
     ''' Wraps exception as reason. '''
     cause = ValueError( 'oops' )

@@ -59,15 +59,47 @@ class ConfigurationInvalidity( Omnierror, ValueError ):
         reason: __.Absential[ str | Exception ] = __.absent,
         *,
         subject: __.Absential[ str ] = __.absent,
+        field: __.Absential[ str ] = __.absent,
+        expected: __.Absential[ str ] = __.absent,
+        value: __.typx.Any = __.absent,
     ) -> None:
-        if __.is_absent( reason ):
-            if __.is_absent( subject ):
-                message = 'Invalid configuration.'
-            else:
-                message = f"Missing required configuration: {subject}."
-        else:
-            message = f"Invalid configuration: {reason}"
+        message = self._compose_message(
+            reason, subject, field, expected, value )
         super( ).__init__( message )
+
+    @staticmethod
+    def _compose_message(
+        reason: __.Absential[ str | Exception ],
+        subject: __.Absential[ str ],
+        field: __.Absential[ str ],
+        expected: __.Absential[ str ],
+        value: __.typx.Any,
+    ) -> str:
+        if not __.is_absent( field ):
+            return ConfigurationInvalidity._format_field_error(
+                field, expected, value )
+        if not __.is_absent( subject ):
+            return f"Missing required configuration: {subject}."
+        if not __.is_absent( reason ):
+            return f"Invalid configuration: {reason}"
+        return 'Invalid configuration.'
+
+    @staticmethod
+    def _format_field_error(
+        field: str,
+        expected: __.Absential[ str ],
+        value: __.typx.Any,
+    ) -> str:
+        if not __.is_absent( expected ) and not __.is_absent( value ):
+            return (
+                f"Invalid value for '{field}' "
+                f"(expected {expected}, got {value!r})."
+            )
+        if not __.is_absent( expected ):
+            return f"Invalid value for '{field}' (expected {expected})."
+        if not __.is_absent( value ):
+            return f"Invalid value for '{field}' (got {value!r})."
+        return f"Invalid value for '{field}'."
 
     def render_as_markdown( self ) -> tuple[ str, ... ]:
         return ( f"\u274c {self}", )

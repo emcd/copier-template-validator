@@ -188,45 +188,202 @@ def _parse_configuration_data(
     data: __.cabc.Mapping[ str, __.typx.Any ],
     source: __.Absential[ __.Path ] = __.absent,
 ) -> Configuration:
-    ''' Parses configuration mapping into dataclass. '''
-    answers_data = data.get( 'answers', { } )
-    answers_dir_raw = answers_data.get( 'directory' )
-    answers_directory = (
-        __.Path( answers_dir_raw )
-        if answers_dir_raw else __.absent )
-    commands_data = data.get( 'commands', ( ) )
-    commands: list[ ValidationCommand ] = [ ]
-    for cmd in commands_data:
-        try: args = tuple( cmd[ 'args' ] )
-        except KeyError as exception:
-            message = "missing 'args' in command"
-            if not __.is_absent( source ):
-                message = f"{message}: {source}"
-            raise _exceptions.DataInvalidity(
-                source if not __.is_absent( source )
-                else __.Path( '<configuration>' ),
-                message ) from exception
-        commands.append( ValidationCommand(
-            args = args,
-            cwd = cmd.get( 'cwd', __.absent ),
-        ) )
-    options_data = data.get( 'options', { } )
-    template_dir_raw = options_data.get( 'template-directory' )
-    template_directory = (
-        __.Path( template_dir_raw )
-        if template_dir_raw else __.absent )
-    variants_raw = options_data.get( 'variants' )
-    variant_filter = (
-        tuple( variants_raw ) if variants_raw else __.absent )
-    vcs_ref = options_data.get( 'vcs-ref', __.absent )
-    preserve_raw = options_data.get( 'preserve' )
-    unsafe_raw = options_data.get( 'unsafe' )
+    ''' Parses configuration mapping into dataclass.
+
+        Stops at the first invalid value encountered; this is intentional
+        to match the project's fail-fast preference. Collective error
+        reporting is not supported.
+    '''
+    answers_directory = _parse_answers_section(
+        data.get( 'answers', { } ) )
+    commands_data = data.get( 'commands' )
+    commands = (
+        _parse_commands_section( commands_data, source )
+        if commands_data is not None else __.absent )
+    options = _parse_options_section( data.get( 'options', { } ) )
     return Configuration(
         answers_directory = answers_directory,
-        commands = tuple( commands ),
-        template_directory = template_directory,
-        preserve = preserve_raw if preserve_raw is not None else __.absent,
-        variant_filter = variant_filter,
-        vcs_ref = vcs_ref if vcs_ref else __.absent,
-        unsafe = unsafe_raw if unsafe_raw is not None else __.absent,
+        commands = commands,
+        template_directory = options[ 'template_directory' ],
+        preserve = options[ 'preserve' ],
+        variant_filter = options[ 'variant_filter' ],
+        vcs_ref = options[ 'vcs_ref' ],
+        unsafe = options[ 'unsafe' ],
     )
+
+
+def _parse_answers_section(
+    answers_data: __.typx.Any,
+) -> __.Absential[ __.Path ]:
+    ''' Parses ``[answers]`` section. '''
+    answers_data = _expect_mapping( 'answers', answers_data )
+    directory = answers_data.get( 'directory' )
+    if directory is None: return __.absent
+    _expect_string( 'answers.directory', directory )
+    return __.Path( directory )
+
+
+def _parse_commands_section(
+    commands_data: __.typx.Any,
+    source: __.Absential[ __.Path ],
+) -> __.Absential[ tuple[ ValidationCommand, ... ] ]:
+    ''' Parses ``[[commands]]`` array.
+
+        Returns ``absent`` when the key is absent (inherited commands
+        preserved through merge). Returns an empty tuple for an explicit
+        empty array (clears inherited commands through merge).
+    '''
+    if commands_data is None: return __.absent
+    if ( not isinstance( commands_data, __.cabc.Sequence )
+         or isinstance( commands_data, str ) ):
+        raise _exceptions.ConfigurationInvalidity(
+            field = 'commands',
+            expected = 'sequence of mappings',
+            value = commands_data )
+    items = __.typx.cast(
+        __.cabc.Sequence[ __.typx.Any ], commands_data )
+    return tuple(
+        _parse_command( index, cmd, source )
+        for index, cmd in enumerate( items ) )
+
+
+def _parse_command(
+    index: int,
+    cmd: __.typx.Any,
+    source: __.Absential[ __.Path ],
+) -> ValidationCommand:
+    ''' Parses a single command entry. '''
+    cmd = _expect_mapping( f"commands[{index}]", cmd )
+    try: raw_args = cmd[ 'args' ]
+    except KeyError as exception:
+        message = "missing 'args' in command"
+        if not __.is_absent( source ):
+            message = f"{message}: {source}"
+        raise _exceptions.DataInvalidity(
+            source if not __.is_absent( source )
+            else __.Path( '<configuration>' ),
+            message ) from exception
+    args = _expect_string_sequence(
+        f"commands[{index}].args", raw_args )
+    cwd = cmd.get( 'cwd', __.absent )
+    if not __.is_absent( cwd ):
+        _expect_string( f"commands[{index}].cwd", cwd )
+    return ValidationCommand( args = args, cwd = cwd )
+
+
+def _parse_options_section(
+    options_data: __.typx.Any,
+) -> __.cabc.Mapping[ str, __.typx.Any ]:
+    ''' Parses ``[options]`` section into field map. '''
+    options_data = _expect_mapping( 'options', options_data )
+    template_directory = _parse_template_directory_option(
+        options_data.get( 'template-directory' ) )
+    variants_data = options_data.get( 'variants' )
+    variant_filter = (
+        _parse_variant_filter( variants_data )
+        if variants_data is not None else __.absent )
+    vcs_ref = _parse_vcs_ref( options_data.get( 'vcs-ref' ) )
+    preserve = _expect_bool(
+        'options.preserve', options_data.get( 'preserve' ) )
+    unsafe = _expect_bool(
+        'options.unsafe', options_data.get( 'unsafe' ) )
+    return {
+        'template_directory': template_directory,
+        'preserve': preserve,
+        'variant_filter': variant_filter,
+        'vcs_ref': vcs_ref,
+        'unsafe': unsafe,
+    }
+
+
+def _parse_template_directory_option(
+    value: __.typx.Any,
+) -> __.Absential[ __.Path ]:
+    ''' Parses ``options.template-directory``. '''
+    if value is None: return __.absent
+    _expect_string( 'options.template-directory', value )
+    return __.Path( value )
+
+
+def _parse_vcs_ref(
+    value: __.typx.Any,
+) -> __.Absential[ str ]:
+    ''' Parses ``options.vcs-ref``, treating empty as absent. '''
+    if value is None: return __.absent
+    if value == '': return __.absent
+    return _expect_string( 'options.vcs-ref', value )
+
+
+def _parse_variant_filter(
+    variants: __.typx.Any,
+) -> __.Absential[ tuple[ str, ... ] ]:
+    ''' Parses ``options.variants`` into tuple or absent. '''
+    if variants is None: return __.absent
+    if ( not isinstance( variants, __.cabc.Sequence )
+         or isinstance( variants, str ) ):
+        raise _exceptions.ConfigurationInvalidity(
+            field = 'options.variants',
+            expected = 'sequence of strings',
+            value = variants )
+    return _expect_string_sequence( 'options.variants', variants )
+
+
+def _expect_bool(
+    field: str, value: __.typx.Any
+) -> __.Absential[ bool ]:
+    ''' Validates bool field or returns absent. '''
+    if value is None: return __.absent
+    if not isinstance( value, bool ):
+        raise _exceptions.ConfigurationInvalidity(
+            field = field,
+            expected = 'bool',
+            value = value )
+    return value
+
+
+def _expect_mapping(
+    field: str, value: __.typx.Any,
+) -> __.cabc.Mapping[ str, __.typx.Any ]:
+    ''' Validates mapping field or raises. '''
+    if not _is_mapping( value ):
+        raise _exceptions.ConfigurationInvalidity(
+            field = field,
+            expected = 'mapping',
+            value = value )
+    return value
+
+
+def _expect_string(
+    field: str, value: __.typx.Any,
+) -> str:
+    ''' Validates string field or raises. '''
+    if not isinstance( value, str ):
+        raise _exceptions.ConfigurationInvalidity(
+            field = field,
+            expected = 'str',
+            value = value )
+    return value
+
+
+def _expect_string_sequence(
+    field: str, value: __.typx.Any,
+) -> tuple[ str, ... ]:
+    ''' Validates sequence-of-strings field or raises. '''
+    if ( not isinstance( value, __.cabc.Sequence )
+         or isinstance( value, str ) ):
+        raise _exceptions.ConfigurationInvalidity(
+            field = field,
+            expected = 'sequence of strings',
+            value = value )
+    items = __.typx.cast(
+        __.cabc.Sequence[ __.typx.Any ], value )
+    return tuple(
+        _expect_string( f"{field}[{index}]", item )
+        for index, item in enumerate( items ) )
+
+
+def _is_mapping(
+    value: __.typx.Any,
+) -> __.typx.TypeGuard[ __.cabc.Mapping[ str, __.typx.Any ] ]:
+    ''' Type guard for mapping values. '''
+    return isinstance( value, __.cabc.Mapping )
