@@ -188,7 +188,8 @@ def validate_variant(
     ''' Validates a single template variant. '''
     answers_dir = config.answers_directory
     if __.is_absent( answers_dir ):
-        raise _exceptions.ConfigurationInvalidity( )
+        raise _exceptions.ConfigurationInvalidity(
+            subject = 'answers directory' )
     answers_file = answers_dir / f"answers-{variant}.yaml"
     if not answers_file.is_file( ):
         raise _exceptions.ConfigurationAbsence( answers_file )
@@ -257,4 +258,5 @@ def _resolve_template_directory(
     ''' Resolves template directory from configuration. '''
     if not __.is_absent( config.template_directory ):
         return config.template_directory
-    raise _exceptions.ConfigurationInvalidity( )
+    raise _exceptions.ConfigurationInvalidity(
+        subject = 'template directory' )
