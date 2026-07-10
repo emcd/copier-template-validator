@@ -153,6 +153,7 @@ def execute_validation_commands( # noqa: PLR0913
         bool( config.preserve )
         if not __.is_absent( config.preserve )
         else False )
+    if __.is_absent( config.commands ): return
     for cmd in config.commands:
         args, cwd = _config.interpolate_command(
             cmd, template_directory, project_directory,
@@ -214,7 +215,10 @@ def validate_variant(
             config, template_directory, project_directory,
             temporary_directory, variant,
             executor = executor )
-        items = len( config.commands ) + 1
+        commands_count = (
+            0 if __.is_absent( config.commands )
+            else len( config.commands ) )
+        items = commands_count + 1
         result = ValidationResult(
             variant = variant,
             temporary_directory = temporary_directory,

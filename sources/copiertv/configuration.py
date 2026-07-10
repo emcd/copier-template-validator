@@ -51,9 +51,9 @@ class Configuration( __.immut.DataclassObject ):
             ''' Directory containing ``answers-*.yaml`` files. ''' ),
     ] = __.absent
     commands: __.typx.Annotated[
-        tuple[ ValidationCommand, ... ],
+        __.Absential[ tuple[ ValidationCommand, ... ] ],
         __.typx.Doc( ''' Validation commands to execute. ''' ),
-    ] = ( )
+    ] = __.absent
     template_directory: __.typx.Annotated[
         __.Absential[ __.Path ],
         __.typx.Doc( ''' Template source directory. ''' ),
