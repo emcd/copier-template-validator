@@ -23,6 +23,22 @@ Release Notes
 
 .. towncrier release notes start
 
+copiertv 1.0a2 (2026-07-09)
+===========================
+
+Enhancements
+------------
+
+- Add ``--version`` flag and improve CLI application description.
+- Improve error diagnostics for missing configuration.
+
+
+Repairs
+-------
+
+- Fix commands field default to preserve project configuration during merge.
+
+
 copiertv 1.0a0 (2026-06-13)
 ===========================
 
