@@ -55,10 +55,18 @@ class ConfigurationInvalidity( Omnierror, ValueError ):
     ''' Configuration data is invalid or a dependency is missing. '''
 
     def __init__(
-        self, reason: __.Absential[ str | Exception ] = __.absent
+        self,
+        reason: __.Absential[ str | Exception ] = __.absent,
+        *,
+        subject: __.Absential[ str ] = __.absent,
     ) -> None:
-        if __.is_absent( reason ): message = 'Invalid configuration.'
-        else: message = f"Invalid configuration: {reason}"
+        if __.is_absent( reason ):
+            if __.is_absent( subject ):
+                message = 'Invalid configuration.'
+            else:
+                message = f"Missing required configuration: {subject}."
+        else:
+            message = f"Invalid configuration: {reason}"
         super( ).__init__( message )
 
     def render_as_markdown( self ) -> tuple[ str, ... ]:

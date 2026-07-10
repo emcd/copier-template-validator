@@ -114,7 +114,14 @@ class _ValidateCommand( __.appcore_cli.Command ):
 
 
 class _Application( __.appcore_cli.Application ):
-    ''' Copiertv CLI application. '''
+    ''' Validates Copier templates against configuration variants. '''
+
+    version: __.typx.Annotated[
+        bool,
+        __.tyro.conf.arg(
+            help = 'Display version and exit.',
+            prefix_name = False ),
+    ] = False
 
     command: __.typx.Union[
         __.typx.Annotated[
@@ -131,6 +138,10 @@ class _Application( __.appcore_cli.Application ):
 
     async def execute( self, auxdata: __.Globals ) -> None:
         ''' Dispatches to the selected command. '''
+        if self.version:
+            from . import __version__
+            print( f"copiertv {__version__}" )
+            raise SystemExit( 0 )
         await self.command( auxdata )
 
     async def prepare(

@@ -55,7 +55,7 @@ def test_120_configuration_defaults( ):
     ''' Has expected default values. '''
     config = Configuration( )
     assert config.answers_directory is absent
-    assert config.commands == ( )
+    assert config.commands is absent
     assert config.template_directory is absent
     assert config.preserve is absent
     assert config.variant_filter is absent
