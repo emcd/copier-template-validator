@@ -27,7 +27,7 @@ from . import exceptions
 # --- END: Injected by Copier ---
 
 
-__version__ = '1.0a2'
+__version__ = '1.0a3'
 
 
 def main( ): # pragma: no cover
