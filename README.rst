@@ -161,6 +161,10 @@ Commands support placeholder interpolation for paths::
 Available placeholders: ``{template_directory}``, ``{project_directory}``,
 ``{temporary_directory}``, ``{variant}``.
 
+For the complete list of recognized keys, absent-vs-empty semantics,
+and configuration error rendering, see the `Configuration Reference
+<https://emcd.github.io/copier-template-validator/stable/sphinx-html/examples/cli.html#configuration-reference>`_.
+
 
 Contribution 🤝
 ===============================================================================

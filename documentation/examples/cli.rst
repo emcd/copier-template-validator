@@ -52,7 +52,7 @@ Validate and preserve the generated project for inspection:
 
 
 Configuration
-===============================================================================
+==============================================================================
 
 Create ``.auxiliary/configuration/copiertv/general.toml`` in your template
 repository:
@@ -69,6 +69,7 @@ repository:
     args = ["hatch", "--env", "develop", "run", "make-all"]
 
     [options]
+    template-directory = "."
     preserve = false
     unsafe = false
 
@@ -82,3 +83,91 @@ Use placeholders in command arguments and working directories:
 
 Available placeholders: ``{template_directory}``, ``{project_directory}``,
 ``{temporary_directory}``, ``{variant}``.
+
+
+Configuration Reference
+------------------------------------------------------------------------------
+
+The full set of TOML keys recognized by copiertv:
+
+.. list-table::
+   :header-rows: 1
+   :widths: 30 20 50
+
+   * - Key
+     - Type
+     - Description
+   * - ``[answers] directory``
+     - string (path)
+     - Directory containing ``answers-*.yaml`` preset files.
+   * - ``[[commands]]``
+     - array of tables
+     - Validation commands to execute against each generated project.
+       Each entry *must* declare ``args``; ``cwd`` is optional.
+   * - ``[[commands]] args``
+     - sequence of strings (required)
+     - Argument vector passed to the command. Supports placeholders.
+   * - ``[[commands]] cwd``
+     - string (optional)
+     - Working directory. Supports placeholders. Defaults to the
+       template directory.
+   * - ``[options] template-directory``
+     - string (path)
+     - Source directory of the Copier template. Required when not
+       supplied via CLI.
+   * - ``[options] variants``
+     - sequence of strings (optional)
+     - Restricts validation to a subset of variant names. Omit to
+       validate all discovered variants.
+   * - ``[options] vcs-ref``
+     - string (optional)
+     - Git ref passed to Copier (branch, tag, or commit). An empty
+       string is treated as absent.
+   * - ``[options] preserve``
+     - bool (optional)
+     - When true, keeps generated project directories on disk after
+       validation rather than cleaning them up.
+   * - ``[options] unsafe``
+     - bool (optional)
+     - When true, allows unsafe Copier template features (custom
+       Jinja extensions, template migrations, and pre/post
+       tasks).
+
+Absent vs. empty semantics
+..............................................................................
+
+Configuration values flow through three layers in ascending precedence:
+user configuration (via ``emcd-appcore``), project configuration
+(``general.toml``), and CLI overrides. When a key is *omitted*, its
+value is inherited from the next-lower layer. The parser
+deliberately distinguishes *absent* from *explicitly empty* for three
+keys, but in two different ways:
+
+- ``commands = []`` and ``variants = []`` clear the inherited list
+  — useful for overriding a default set without replacing it.
+  ``commands = []`` matches no commands; ``variants = []`` matches
+  no variants.
+- ``vcs-ref = ""`` is treated as absent. Empty strings are a
+  convenient sentinel value from configuration templates and should
+  behave the same as omitting the key.
+
+All other sequence and scalar keys follow the standard inheritance
+behavior: omit the key to inherit, present the key with a value to
+override.
+
+Configuration errors
+..............................................................................
+
+Invalid configuration surfaces through the CLI's Markdown error
+interface. The exact content depends on which kind of error is
+raised:
+
+- Type validation errors from the ``_expect_*`` helpers identify
+  the field path, the expected type, and (where reasonable to
+  print) the offending value.
+- Structural errors raised by ``DataInvalidity`` (for example, a
+  ``[[commands]]`` entry missing ``args``) identify the source
+  configuration file path along with a short reason.
+
+Configuration parsing is fail-fast: the parser stops at the first
+invalid value rather than reporting all errors at once.
