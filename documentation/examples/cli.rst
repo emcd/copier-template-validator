@@ -115,10 +115,6 @@ The full set of TOML keys recognized by copiertv:
      - string (path)
      - Source directory of the Copier template. Required when not
        supplied via CLI.
-   * - ``[options] variants``
-     - sequence of strings (optional)
-     - Restricts validation to a subset of variant names. Omit to
-       validate all discovered variants.
    * - ``[options] vcs-ref``
      - string (optional)
      - Git ref passed to Copier (branch, tag, or commit). An empty
@@ -140,13 +136,12 @@ Configuration values flow through three layers in ascending precedence:
 user configuration (via ``emcd-appcore``), project configuration
 (``general.toml``), and CLI overrides. When a key is *omitted*, its
 value is inherited from the next-lower layer. The parser
-deliberately distinguishes *absent* from *explicitly empty* for three
+deliberately distinguishes *absent* from *explicitly empty* for two
 keys, but in two different ways:
 
-- ``commands = []`` and ``variants = []`` clear the inherited list
-  — useful for overriding a default set without replacing it.
-  ``commands = []`` matches no commands; ``variants = []`` matches
-  no variants.
+- ``commands = []`` clears the inherited list — useful for
+  overriding a default set without replacing it. ``commands = []``
+  matches no commands.
 - ``vcs-ref = ""`` is treated as absent. Empty strings are a
   convenient sentinel value from configuration templates and should
   behave the same as omitting the key.

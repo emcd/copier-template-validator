@@ -62,10 +62,6 @@ class Configuration( __.immut.DataclassObject ):
         __.Absential[ bool ],
         __.typx.Doc( ''' Preserve temporary directories. ''' ),
     ] = __.absent
-    variant_filter: __.typx.Annotated[
-        __.Absential[ tuple[ str, ... ] ],
-        __.typx.Doc( ''' Only validate these variants. ''' ),
-    ] = __.absent
     vcs_ref: __.typx.Annotated[
         __.Absential[ str ],
         __.typx.Doc( ''' Git ref for copier copy. ''' ),
@@ -206,7 +202,6 @@ def _parse_configuration_data(
         commands = commands,
         template_directory = options[ 'template_directory' ],
         preserve = options[ 'preserve' ],
-        variant_filter = options[ 'variant_filter' ],
         vcs_ref = options[ 'vcs_ref' ],
         unsafe = options[ 'unsafe' ],
     )
@@ -278,10 +273,6 @@ def _parse_options_section(
     options_data = _expect_mapping( 'options', options_data )
     template_directory = _parse_template_directory_option(
         options_data.get( 'template-directory' ) )
-    variants_data = options_data.get( 'variants' )
-    variant_filter = (
-        _parse_variant_filter( variants_data )
-        if variants_data is not None else __.absent )
     vcs_ref = _parse_vcs_ref( options_data.get( 'vcs-ref' ) )
     preserve = _expect_bool(
         'options.preserve', options_data.get( 'preserve' ) )
@@ -290,7 +281,6 @@ def _parse_options_section(
     return {
         'template_directory': template_directory,
         'preserve': preserve,
-        'variant_filter': variant_filter,
         'vcs_ref': vcs_ref,
         'unsafe': unsafe,
     }
@@ -312,20 +302,6 @@ def _parse_vcs_ref(
     if value is None: return __.absent
     if value == '': return __.absent
     return _expect_string( 'options.vcs-ref', value )
-
-
-def _parse_variant_filter(
-    variants: __.typx.Any,
-) -> __.Absential[ tuple[ str, ... ] ]:
-    ''' Parses ``options.variants`` into tuple or absent. '''
-    if variants is None: return __.absent
-    if ( not isinstance( variants, __.cabc.Sequence )
-         or isinstance( variants, str ) ):
-        raise _exceptions.ConfigurationInvalidity(
-            field = 'options.variants',
-            expected = 'sequence of strings',
-            value = variants )
-    return _expect_string_sequence( 'options.variants', variants )
 
 
 def _expect_bool(

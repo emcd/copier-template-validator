@@ -59,7 +59,6 @@ def test_120_configuration_defaults( ):
     assert config.commands is absent
     assert config.template_directory is absent
     assert config.preserve is absent
-    assert config.variant_filter is absent
     assert config.vcs_ref is absent
     assert config.unsafe is absent
 
@@ -172,9 +171,6 @@ def test_200_detect_project_root_no_vcs( fs ):
 _BAD_CONFIGS: dict[ str, dict[ str, Any ] ] = {
     'options.preserve': { 'options': { 'preserve': 'yes' } },
     'options.unsafe': { 'options': { 'unsafe': 1 } },
-    'options.variants_type': { 'options': { 'variants': 'alpha' } },
-    'options.variants_element':
-        { 'options': { 'variants': [ 'alpha', 42 ] } },
     'options.template_directory':
         { 'options': { 'template-directory': 42 } },
     'answers': { 'answers': [ 'bad' ] },
@@ -215,27 +211,7 @@ def test_220_invalid_unsafe_type( ):
     assert 'bool' in message
 
 
-def test_230_invalid_variants_type( ):
-    ''' Raises when variants is not a sequence. '''
-    import pytest
-    from copiertv import exceptions
-    with pytest.raises( exceptions.ConfigurationInvalidity ) as info:
-        _bad( 'options.variants_type' )
-    assert 'options.variants' in str( info.value )
-
-
-def test_240_invalid_variants_element_type( ):
-    ''' Raises when variant element is not a string. '''
-    import pytest
-    from copiertv import exceptions
-    with pytest.raises( exceptions.ConfigurationInvalidity ) as info:
-        _bad( 'options.variants_element' )
-    message = str( info.value )
-    assert 'options.variants[1]' in message
-    assert 'str' in message
-
-
-def test_250_invalid_template_directory_type( ):
+def test_230_invalid_template_directory_type( ):
     ''' Raises when template-directory is not a string. '''
     import pytest
     from copiertv import exceptions
@@ -304,7 +280,6 @@ def test_310_valid_full_configuration( tmp_path ):
             'template-directory': str( tmp_path / 'template' ),
             'preserve': True,
             'unsafe': False,
-            'variants': [ 'default', 'minimal' ],
             'vcs-ref': 'main',
         },
     }
@@ -315,7 +290,6 @@ def test_310_valid_full_configuration( tmp_path ):
     assert config.template_directory == tmp_path / 'template'
     assert config.preserve is True
     assert config.unsafe is False
-    assert config.variant_filter == ( 'default', 'minimal' )
     assert config.vcs_ref == 'main'
 
 
@@ -398,34 +372,7 @@ def test_360_missing_commands_preserves_inheritance( tmp_path ):
 # --- Todo 10 audit: every field type's merge-clobber behavior ---
 
 
-def test_370_variant_filter_explicit_empty_clears( ):
-    ''' Empty variant-filter list clears inherited variants in merge. '''
-    from copiertv.configuration import (
-        _parse_configuration_data, merge_configurations,
-    )
-    base = _parse_configuration_data(
-        { 'options': { 'variants': [ 'default', 'minimal' ] } } )
-    override = _parse_configuration_data(
-        { 'options': { 'variants': [] } } )
-    result = merge_configurations( base, override )
-    assert result.variant_filter is not absent
-    assert result.variant_filter == ( )
-
-
-def test_380_missing_variant_filter_preserves_inheritance( ):
-    ''' Missing variant-filter key preserves inherited variants in merge. '''
-    from copiertv.configuration import (
-        _parse_configuration_data, merge_configurations,
-    )
-    base = _parse_configuration_data(
-        { 'options': { 'variants': [ 'default' ] } } )
-    override = _parse_configuration_data( { 'options': {} } )
-    result = merge_configurations( base, override )
-    assert result.variant_filter is not absent
-    assert result.variant_filter == ( 'default', )
-
-
-def test_390_answers_directory_present_inherits( ):
+def test_370_answers_directory_present_inherits( ):
     ''' Answers-directory set in base survives absent override. '''
     from copiertv.configuration import (
         _parse_configuration_data, merge_configurations,
@@ -497,7 +444,7 @@ def test_440_missing_keys_become_absent( ):
     config = _parse_configuration_data( { } )
     for field in (
         'answers_directory', 'commands', 'template_directory',
-        'preserve', 'variant_filter', 'vcs_ref', 'unsafe',
+        'preserve', 'vcs_ref', 'unsafe',
     ):
         value = getattr( config, field )
         assert value is absent, (
@@ -506,16 +453,12 @@ def test_440_missing_keys_become_absent( ):
 
 
 def test_450_explicit_empty_collection_signals_clear( ):
-    ''' Explicit empty ``commands = []`` / ``variants = []`` survives
-        the parser as an empty tuple (not converted to ``absent``),
-        which is the wire signal for "clear inheritance" through merge.
+    ''' Explicit empty ``commands = []`` survives the parser as an
+        empty tuple (not converted to ``absent``), which is the wire
+        signal for "clear inheritance" through merge.
     '''
     from copiertv.configuration import _parse_configuration_data
     commands_config = _parse_configuration_data(
         { 'commands': [ ] } )
     assert commands_config.commands is not absent
     assert commands_config.commands == ( )
-    variants_config = _parse_configuration_data(
-        { 'options': { 'variants': [ ] } } )
-    assert variants_config.variant_filter is not absent
-    assert variants_config.variant_filter == ( )
