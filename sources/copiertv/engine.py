@@ -45,8 +45,8 @@ class ValidationResult( __.immut.DataclassObject ):
             f"'{self.variant}' variant:",
             f" * Temporary Directory: "
             f"{self.temporary_directory}",
-            f" * Items: {self.items_generated}"
-            f"/{self.items_attempted} generated",
+            f" * Items: {self.items_generated} of "
+            f"{self.items_attempted} generated",
         ]
         if self.preserved:
             lines.append(

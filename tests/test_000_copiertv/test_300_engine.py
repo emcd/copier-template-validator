@@ -101,8 +101,21 @@ def test_180_validation_result_render_success( tmp_path ):
     assert len( lines ) == 4
     assert 'default' in lines[ 0 ]
     assert str( tmp_path ) in lines[ 1 ]
-    assert '2/2' in lines[ 2 ]
+    assert '2 of 2 generated' in lines[ 2 ]
     assert 'cleaned up' in lines[ 3 ]
+
+
+def test_185_validation_result_render_partial( tmp_path ):
+    ''' Renders a partial result when generated differs from attempted. '''
+    result = ValidationResult(
+        variant = 'partial',
+        temporary_directory = tmp_path,
+        items_attempted = 5,
+        items_generated = 3,
+        preserved = False,
+    )
+    lines = result.render_as_markdown( )
+    assert '3 of 5 generated' in lines[ 2 ]
 
 
 def test_190_validation_result_render_preserved( tmp_path ):
