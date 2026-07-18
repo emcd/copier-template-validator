@@ -88,7 +88,7 @@ or, run directly with `uvx
 
     uvx copiertv
 
-Or, install via `pipx <https://pipx.pypa.io/stable/how-to/install-pipx/>`_:
+Or, install via `pipx <https://pipx.pypa.io/stable/how-to/install-pipx.html>`_:
 
 ::
 
