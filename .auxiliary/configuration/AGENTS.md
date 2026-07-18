@@ -135,3 +135,24 @@ When a commit completes an OpenSpec task or requirement, update the relevant Ope
      https://raw.githubusercontent.com/emcd/agents-common/master/examples/nb-notes/team-organization/README.md
      Then link the note here, for example:
      - Team org, role ownership, signoff policy, and merge workflow: `coordination/general/<n>` -->
+
+## Workflow constraints learned in flight
+
+- **`git filter-branch` is forbidden for commit-history rewrites on this repo.**
+  Rationale: `filter-branch --msg-filter` strips commit signatures
+  (signatures bind to specific commit bytes; any rewrite invalidates
+  the prior signature). Local pre-push hooks do not detect the loss;
+  GitHub's "require verified signatures" branch protection rejects
+  the push unless an account-level bypass is configured, which logs
+  a public "Bypassed rule violations" entry on every push.
+
+  Alternatives that preserve signatures: `git commit --amend` (preferred
+  for fixing the most recent commit message; interactive editor), or
+  `git reset <base>` followed by `git cherry-pick --no-commit <sha>` +
+  `git commit -F <message>` (preferred when amending older commits).
+  Both rely on the global `commit.gpgsign=true` to produce signed
+  successors.
+
+  If a commit-message correction is needed on already-pushed commits
+  that you cannot or will not force-push, leave the commits in place
+  and document the discrepancy inline rather than rewriting history.
