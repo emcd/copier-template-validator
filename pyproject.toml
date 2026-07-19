@@ -23,7 +23,7 @@ dependencies = [
   'absence~=1.1',
   'dynadoc~=1.4',
   'frigid~=4.2',
-  'emcd-appcore[cli]~=1.6',
+  'emcd-appcore[cli]~=1.7',
   # --- END: Injected by Copier ---
 ]
 classifiers = [ # https://pypi.org/classifiers
