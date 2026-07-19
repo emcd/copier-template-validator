@@ -28,6 +28,122 @@ from . import exceptions as _exceptions
 from . import state as _state
 
 
+# Semantic replacements for decorated Unicode characters that are
+# part of the rendered CLI output. The pair ``🗑️`` / ``🗑`` covers
+# the variation-selector-16 form and the bare form, since some
+# terminals strip the variation selector before printing.
+_RENDERING_REPLACEMENTS = (
+    ( '\u2705', '[OK]' ),
+    ( '\u274c', '[ERROR]' ),
+    ( '\U0001f4c1', '[FILES]' ),
+    ( '\U0001f5d1\ufe0f', '[CLEANUP]' ),
+    ( '\U0001f5d1', '[CLEANUP]' ),
+)
+
+
+def _apply_substitutions_to_lines(
+    lines: tuple[ str, ... ],
+) -> tuple[ str, ... ]:
+    ''' Apply the semantic ``_RENDERING_REPLACEMENTS`` table to
+        every line. ``str.replace`` replaces multi-code-unit
+        decorations (e.g., the variation-selector-16 form of the
+        trash emoji) as a unit.
+    '''
+    adapted: list[ str ] = list( lines )
+    for decorated, label in _RENDERING_REPLACEMENTS:
+        adapted = [ line.replace( decorated, label ) for line in adapted ]
+    return tuple( adapted )
+
+
+def _adapt_rendered_lines(
+    lines: tuple[ str, ... ],
+    encoding: __.typx.Optional[ str ],
+) -> tuple[ str, ... ]:
+    ''' Adapt ``lines`` for safe output under ``encoding``.
+
+        ``render_as_markdown`` returns a pure, stream-independent
+        representation; encoding is a presentation concern handled
+        here. On a UTF-capable stream the lines are returned
+        unchanged. On a stream whose declared encoding cannot
+        represent the decorated characters, the substitutions
+        above are applied first and any text that still cannot
+        encode is escaped with ``backslashreplace`` so user
+        paths and messages are not silently dropped. An unknown
+        encoding name falls through to the same safe path using
+        ASCII as the safest universally-supported target.
+    '''
+    if encoding is None:
+        return lines
+    for candidate in ( lines, _apply_substitutions_to_lines( lines ) ):
+        if _encodes_cleanly( candidate, encoding ):
+            return candidate
+    safe_encodings: list[ str ] = []
+    if encoding not in ( None, 'ascii' ):
+        safe_encodings.append( encoding )
+    safe_encodings.append( 'ascii' )
+    adapted = _apply_substitutions_to_lines( lines )
+    for safe in safe_encodings:
+        result = _backslash_replace( adapted, safe )
+        if result is not None:
+            return result
+    return adapted
+
+
+def _backslash_replace(
+    lines: tuple[ str, ... ],
+    encoding: str,
+) -> __.typx.Optional[ tuple[ str, ... ] ]:
+    ''' Round-trip ``lines`` through ``encoding`` with
+        ``backslashreplace`` error handling. Returns ``None`` if
+        the encoding name is unknown (caller falls back to the
+        next safe encoding).
+    '''
+    try:
+        return tuple(
+            line.encode( encoding, errors = 'backslashreplace' ).decode(
+                encoding, errors = 'backslashreplace' )
+            for line in lines
+        )
+    except LookupError:
+        return None
+
+
+def _encodes_cleanly(
+    candidate: tuple[ str, ... ],
+    encoding: __.typx.Optional[ str ],
+) -> bool:
+    ''' True iff ``candidate`` encodes without error under
+        ``encoding``. ``LookupError`` is treated as not clean so
+        unknown encoding names fall through to the safe path.
+    '''
+    if encoding is None:
+        return True
+    try:
+        '\n'.join( candidate ).encode( encoding )
+    except ( UnicodeEncodeError, LookupError ):
+        return False
+    return True
+
+
+def _print_rendered_lines(
+    lines: tuple[ str, ... ],
+    stream: __.typx.Optional[ __.typx.Any ] = None,
+) -> None:
+    ''' Print rendered CLI lines, adapting to ``stream``'s encoding.
+
+        ``stream`` is resolved at call time (not as a default
+        argument) so the helper picks up encoding changes such as
+        pytest's capture, application-level redirection, or
+        embedding contexts. The default falls back to the
+        current value of ``sys.stdout``.
+    '''
+    if stream is None:
+        stream = __.sys.stdout
+    encoding = getattr( stream, 'encoding', None )
+    adapted = _adapt_rendered_lines( lines, encoding )
+    print( '\n'.join( adapted ), file = stream )
+
+
 def intercept_errors( ) -> __.cabc.Callable[
     [ __.cabc.Callable[
         ..., __.cabc.Coroutine[ __.typx.Any, __.typx.Any, None ] ] ],
@@ -50,8 +166,7 @@ def intercept_errors( ) -> __.cabc.Callable[
                 renderer = getattr(
                     exc, 'render_as_markdown', None )
                 if renderer:
-                    lines = renderer( )
-                    print( '\n'.join( lines ) )
+                    _print_rendered_lines( renderer( ) )
                 raise SystemExit( 1 ) from exc
         return wrapper
     return decorator
@@ -73,8 +188,7 @@ async def _validate(
 ) -> None:
     ''' Validates a template variant. '''
     result = _engine.validate_variant( variant, config )
-    lines = result.render_as_markdown( )
-    print( '\n'.join( lines ) )
+    _print_rendered_lines( result.render_as_markdown( ) )
 
 
 class _SurveyCommand( __.appcore_cli.Command ):

@@ -21,17 +21,26 @@
 ''' Tests for command-line interface. '''
 
 
+import io
 import os
 import subprocess
 import sys
+
 from pathlib import Path
 
 import pytest
 
 from copiertv import exceptions
-from copiertv.cli import _survey, _validate, execute, intercept_errors
+from copiertv.cli import (
+    _RENDERING_REPLACEMENTS,
+    _adapt_rendered_lines,
+    _print_rendered_lines,
+    _survey,
+    _validate,
+    execute,
+    intercept_errors,
+)
 from copiertv.configuration import Configuration
-
 
 # --- InterceptErrors ---
 
@@ -250,3 +259,158 @@ def test_240_cli_validate_without_config( tmp_path ):
     ''' ``validate`` with no configuration exits non-zero. '''
     result = _run_cli( 'validate', 'default', cwd = tmp_path )
     assert result.returncode != 0
+
+
+# --- Encoding adaptation helpers ---
+
+
+def _text_stream( encoding ):
+    ''' Wraps a BytesIO in a TextIOWrapper with the given encoding. '''
+    return io.TextIOWrapper( io.BytesIO( ), encoding = encoding )
+
+
+def test_300_adapt_rendered_lines_utf8_unchanged( ):
+    ''' UTF-8 streams receive the lines unchanged. '''
+    sample = (
+        '\u2705 Validation complete for \'default\' variant:',
+        ' * Items: 1 of 1 generated',
+        '\u274c Invalid configuration: answers directory',
+    )
+    assert _adapt_rendered_lines( sample, 'utf-8' ) == sample
+
+
+def test_310_adapt_rendered_lines_cp1252_substitutes_decorations( ):
+    ''' cp1252 streams receive ASCII labels for all five decorations. '''
+    sample = (
+        '\u2705 ok',                          # success
+        '\u274c fail',                         # error
+        '\U0001f4c1 folder',                  # folder
+        '\U0001f5d1\ufe0f cleanup-with-vs',   # trash with VS-16
+        '\U0001f5d1 cleanup-bare',            # trash without VS-16
+    )
+    adapted = _adapt_rendered_lines( sample, 'cp1252' )
+    assert adapted[ 0 ] == '[OK] ok'
+    assert adapted[ 1 ] == '[ERROR] fail'
+    assert adapted[ 2 ] == '[FILES] folder'
+    assert adapted[ 3 ] == '[CLEANUP] cleanup-with-vs'
+    assert adapted[ 4 ] == '[CLEANUP] cleanup-bare'
+
+
+def test_320_adapt_rendered_lines_ascii_substitutes( ):
+    ''' ASCII streams also receive ASCII labels. '''
+    sample = ( '\u2705 done', '\u274c broken' )
+    adapted = _adapt_rendered_lines( sample, 'ascii' )
+    assert adapted[ 0 ] == '[OK] done'
+    assert adapted[ 1 ] == '[ERROR] broken'
+
+
+def test_330_adapt_rendered_lines_user_text_backslashreplace( ):
+    ''' Non-decoration text that still cannot encode is preserved
+        via ``backslashreplace`` rather than silently dropped.
+    '''
+    sample = ( '\u274c failure on /tmp/路径/内/部', )
+    adapted = _adapt_rendered_lines( sample, 'ascii' )
+    assert '[ERROR]' in adapted[ 0 ]
+    assert 'failure on ' in adapted[ 0 ]
+    # All remaining characters must be safely encodable as ASCII.
+    adapted[ 0 ].encode( 'ascii' )
+
+
+def test_340_adapt_rendered_lines_no_encoding_passes_through( ):
+    ''' Streams without an encoding attribute (e.g., ``StringIO``)
+        pass lines through unchanged so test harness stays
+        Unicode-clean.
+    '''
+    sample = ( '\u2705 keep \u274c', )
+    assert _adapt_rendered_lines( sample, None ) == sample
+
+
+def test_350_adapt_rendered_lines_unknown_encoding_substitutes( ):
+    ''' An unknown encoding name falls through to substitutions
+        and backslashreplace rather than raising.
+    '''
+    sample = ( '\u2705 ok', )
+    adapted = _adapt_rendered_lines( sample, 'not-a-real-codec' )
+    assert '[OK]' in adapted[ 0 ]
+
+
+def test_360_replacements_cover_five_decorations( ):
+    ''' The replacement table covers every decorated literal used
+        in the rendered output, including the bare and
+        variation-selector-16 trash forms.
+    '''
+    expected = {
+        '\u2705', '\u274c', '\U0001f4c1',
+        '\U0001f5d1\ufe0f', '\U0001f5d1',
+    }
+    seen = { src for src, _label in _RENDERING_REPLACEMENTS }
+    assert seen == expected
+
+
+def test_370_print_rendered_lines_adapts_to_stream( ):
+    ''' ``_print_rendered_lines`` adapts to the supplied stream's
+        encoding and writes to it.
+    '''
+    stream = _text_stream( 'cp1252' )
+    _print_rendered_lines( ( '\u2705 done', ), stream = stream )
+    stream.seek( 0 )
+    written = stream.read( )
+    assert written == '[OK] done\n'
+
+
+def test_380_print_rendered_lines_resolves_sys_stdout_each_call( ):
+    ''' ``_print_rendered_lines`` resolves ``sys.stdout`` at call
+        time, not as a default argument, so changes to ``sys.stdout``
+        between calls are respected.
+    '''
+    original_stdout = sys.stdout
+    try:
+        stream = _text_stream( 'cp1252' )
+        sys.stdout = stream
+        _print_rendered_lines( ( '\u2705 first', ) )
+        _print_rendered_lines( ( '\u274c second', ) )
+        sys.stdout = original_stdout
+        stream.seek( 0 )
+        written = stream.read( )
+        assert written == '[OK] first\n[ERROR] second\n'
+    finally:
+        sys.stdout = original_stdout
+
+
+# --- Subprocess regression for the Windows cp1252 failure ---
+
+
+def test_390_subprocess_cp1252_default_survey_no_unicode_encode_error( ):
+    ''' Reproduces the original Windows cp1252 failure on every
+        host by forcing the subprocess interpreter to use cp1252
+        via ``PYTHONIOENCODING``. Asserts nonzero exit, nonempty
+        output, the ``[ERROR]`` fallback label, and no raised
+        ``UnicodeEncodeError``.
+    '''
+    import tempfile
+    with tempfile.TemporaryDirectory( ) as td:
+        base = Path( td )
+        ( base / 'home' ).mkdir( )
+        ( base / 'xdg' ).mkdir( )
+        ( base / 'appdata' ).mkdir( )
+        ( base / 'localappdata' ).mkdir( )
+        env = os.environ.copy( )
+        env[ 'HOME' ] = str( base / 'home' )
+        env[ 'XDG_CONFIG_HOME' ] = str( base / 'xdg' )
+        env[ 'APPDATA' ] = str( base / 'appdata' )
+        env[ 'LOCALAPPDATA' ] = str( base / 'localappdata' )
+        env[ 'PYTHONIOENCODING' ] = 'cp1252'
+        env.pop( 'PYTHONUTF8', None )
+        result = subprocess.run(
+            [ sys.executable, '-m', 'copiertv' ],
+            capture_output = True, text = True,
+            timeout = 30, check = False,
+            cwd = str( base ),
+            env = env,
+        )
+    assert result.returncode != 0
+    assert 'UnicodeEncodeError' not in result.stderr
+    assert 'UnicodeEncodeError' not in result.stdout
+    combined = result.stdout + result.stderr
+    assert combined.strip( ), 'subprocess produced no output'
+    assert '[ERROR]' in combined
